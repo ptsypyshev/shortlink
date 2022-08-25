@@ -7,6 +7,6 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: simpleblog
+      POSTGRES_DB: shortlink
       POSTGRES_USER: usr
       POSTGRES_PASSWORD: pwd

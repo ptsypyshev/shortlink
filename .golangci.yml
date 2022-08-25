@@ -18,9 +18,9 @@ linters-settings:
   gocritic:
     enabled-tags:
       - diagnostic
-      - experimental
       - opinionated
       - performance
+      - experimental
       - style
     disabled-checks:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
@@ -79,7 +79,6 @@ linters:
     - funlen
     - gochecknoinits
     - goconst
-    - gocritic
     - gocyclo
     - gofmt
     - goimports
@@ -109,6 +108,7 @@ linters:
   # - scopelint
   # - gochecknoglobals
   # - gocognit
+  # - gocritic
   # - godot
   # - godox
   # - goerr113

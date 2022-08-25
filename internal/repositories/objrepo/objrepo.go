@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 
 	"github.com/ptsypyshev/shortlink/internal/models"
@@ -26,7 +25,7 @@ type Read[T Modelable] interface {
 }
 
 type Update[T Modelable] interface {
-	Update(ctx context.Context, obj T) (T, error)
+	Update(ctx context.Context, obj T, newObj T) error
 }
 
 type Delete[T Modelable] interface {
@@ -51,7 +50,6 @@ type Users struct {
 	//tracer opentracing.Tracer
 }
 
-//func UsersNew(s Storage[*models.User], l *zap.Logger, t opentracing.Tracer) *Users {
 func UsersNew(s Storage[*models.User], l *zap.Logger) *Users {
 	return &Users{
 		store:  s,
@@ -74,145 +72,86 @@ func (u Users) Read(ctx context.Context, id int) (*models.User, error) {
 	user, err := u.store.Read(ctx, id, &models.User{})
 	if err != nil {
 		u.logger.Error(fmt.Sprintf(`cannot read user: %s`, err))
-		//span.LogFields(log.Error(err))
 		return nil, fmt.Errorf("cannot read user: %w", err)
 	}
 	return user, nil
 }
 
+func (u Users) Update(ctx context.Context, id int, updateUser *models.User) (*models.User, error) {
+	user, err := u.store.Read(ctx, id, &models.User{})
+	if err != nil {
+		u.logger.Error(fmt.Sprintf(`cannot find user with id %d: %s`, id, err))
+		return nil, fmt.Errorf("cannot find user with id %d: %w", id, err)
+	}
+	err = u.store.Update(ctx, user, updateUser)
+	if err != nil {
+		u.logger.Error(fmt.Sprintf(`cannot update user: %s`, err))
+		return nil, fmt.Errorf("cannot update user: %w", err)
+	}
+	return u.store.Read(ctx, id, &models.User{})
+}
+
+func (u Users) Delete(ctx context.Context, id int) (*models.User, error) {
+	user, err := u.store.Read(ctx, id, &models.User{})
+	if err != nil {
+		u.logger.Error(fmt.Sprintf(`search user error: %s`, err))
+		return nil, fmt.Errorf("search user error: %w", err)
+	}
+	return user, u.store.Delete(ctx, id)
+}
+
 type Links struct {
 	store  Storage[*models.Link]
 	logger *zap.Logger
-	tracer opentracing.Tracer
+	//tracer opentracing.Tracer
 }
 
-func LinksNew(s Storage[*models.Link], l *zap.Logger, t opentracing.Tracer) *Links {
+func LinksNew(s Storage[*models.Link], l *zap.Logger) *Links {
 	return &Links{
 		store:  s,
 		logger: l,
-		tracer: t,
+		//tracer: t,
 	}
 }
 
-//type Object[T Modelable] struct {
-//	t string
-//}
+func (l Links) Create(ctx context.Context, link *models.Link) (*models.Link, error) {
+	id, err := l.store.Create(ctx, link)
+	if err != nil {
+		l.logger.Error(fmt.Sprintf(`cannot read link: %s`, err))
+		return nil, fmt.Errorf("cannot create link: %w", err)
+	}
+	link.ID = id
+	return link, nil
+}
 
-//type Create interface {
-//	Create(ctx context.Context, obj Modelable) (int, error)
-//}
-//
-//type Read interface {
-//	Read(ctx context.Context, id int) (*Modelable, error)
-//}
-//
-//type Update interface {
-//	Update(ctx context.Context, obj Modelable) (*Modelable, error)
-//}
-//
-//type Delete interface {
-//	Delete(ctx context.Context, id int) error
-//}
-//
-//type Info interface {
-//	Info(ctx context.Context, obj Modelable) error
-//}
-//
-////type UserSearch interface {
-////	Search()
-////}
-//
-//type Storage interface {
-//	//Create
-//	Read
-//	ReadUser(ctx context.Context, key int) (interface{}, interface{})
-//	//Update
-//	//Delete
-//	//UserSearch
-//	//Info
-//}
-//
-//type Objects[T Modelable] struct {
-//	store Storage
-//}
-//
-//func ObjectsNew[T Modelable](s Storage) *Objects[T] {
-//	//func ObjectsNew[T Modelable]() *Objects[T] {
-//	return &Objects[T]{
-//		store: s,
-//	}
-//}
-//
-//func (o *Objects[T]) ReadUser(ctx context.Context, obj T, key int) (t T) {
-//	panic("aaaaa!")
-//}
+func (l Links) Read(ctx context.Context, id int) (*models.Link, error) {
+	link, err := l.store.Read(ctx, id, &models.Link{})
+	if err != nil {
+		l.logger.Error(fmt.Sprintf(`cannot read link: %s`, err))
+		return nil, fmt.Errorf("cannot read link: %w", err)
+	}
+	return link, nil
+}
 
-//
-//func (o *Objects[T]) Create(ctx context.Context) (Object[T], error) {
-//	id, err := o.store.Create(ctx, T)
-//	if err != nil {
-//		u.logger.Error(fmt.Sprintf(`cannot read user: %s`, err))
-//		span.LogFields(log.Error(err))
-//		return nil, fmt.Errorf("cannot create user: %w", err)
-//	}
-//	user.Id = id
-//	span.LogFields(
-//		log.String("User result", user.String()),
-//	)
-//	return &user, nil
-//}
-//
-//func (u Users) Read(ctx context.Context, id int) (*models.User, error) {
-//	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, u.tracer,
-//		"UserRepo.Read")
-//	defer span.Finish()
-//	span.LogFields(
-//		log.String("id", strconv.Itoa(id)),
-//	)
-//	user, err := u.us.Read(ctx, id)
-//	if err != nil {
-//		u.logger.Error(fmt.Sprintf(`cannot read user: %s`, err))
-//		span.LogFields(log.Error(err))
-//		return nil, fmt.Errorf("cannot read user: %w", err)
-//	}
-//	span.LogFields(
-//		log.String("User result", user.String()),
-//	)
-//	return user, nil
-//}
-//
-//func (u Users) Update(ctx context.Context, updateUser models.User) (*models.User, error) {
-//	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, u.tracer,
-//		"UserRepo.Update")
-//	defer span.Finish()
-//	span.LogFields(
-//		log.String("id", strconv.Itoa(updateUser.Id)),
-//		log.String("updateUser", updateUser.String()),
-//	)
-//	user, err := u.us.Update(ctx, updateUser)
-//	if err != nil {
-//		u.logger.Error(fmt.Sprintf(`cannot update user: %s`, err))
-//		span.LogFields(log.Error(err))
-//		return nil, fmt.Errorf("cannot update user: %w", err)
-//	}
-//	return user, nil
-//}
-//
-//func (u Users) Delete(ctx context.Context, id int) (*models.User, error) {
-//	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, u.tracer,
-//		"UserRepo.Delete")
-//	defer span.Finish()
-//	span.LogFields(
-//		log.String("id", strconv.Itoa(id)),
-//	)
-//	user, err := u.us.Read(ctx, id)
-//	if err != nil {
-//		u.logger.Error(fmt.Sprintf(`cannot read user: %s`, err))
-//		span.LogFields(log.Error(err))
-//		return nil, fmt.Errorf("cannot read user: %w", err)
-//	}
-//	span.LogFields(
-//		log.String("User delete", user.String()),
-//	)
-//	return user, u.us.Delete(ctx, id)
-//}
+func (l Links) Update(ctx context.Context, id int, updateLink *models.Link) (*models.Link, error) {
+	link, err := l.store.Read(ctx, id, &models.Link{})
+	if err != nil {
+		l.logger.Error(fmt.Sprintf(`cannot find link with id %d: %s`, id, err))
+		return nil, fmt.Errorf("cannot find link with id %d: %w", id, err)
+	}
+	err = l.store.Update(ctx, link, updateLink)
+	if err != nil {
+		l.logger.Error(fmt.Sprintf(`cannot update link: %s`, err))
+		return nil, fmt.Errorf("cannot update link: %w", err)
+	}
+	return l.store.Read(ctx, id, &models.Link{})
+}
+
+func (l Links) Delete(ctx context.Context, id int) (*models.Link, error) {
+	link, err := l.store.Read(ctx, id, &models.Link{})
+	if err != nil {
+		l.logger.Error(fmt.Sprintf(`search link error: %s`, err))
+		return nil, fmt.Errorf("search link error: %w", err)
+	}
+	return link, l.store.Delete(ctx, id)
+}

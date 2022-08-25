@@ -1,4 +1,4 @@
-package pg
+package pgdb
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/log/zapadapter"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -18,6 +19,11 @@ import (
 )
 
 const (
+	CreateQuery = iota
+	ReadQuery
+	UpdateQuery
+	DeleteQuery
+
 	UserTable      = "users"
 	UserSelectByID = `SELECT * FROM users WHERE id = $1;`
 	UserDeleteByID = `DELETE FROM users WHERE id = $1;`
@@ -39,7 +45,7 @@ RETURNING id;
 `
 
 	//DatabaseURL = "postgres://usr:pwd@postgres:5432/simpleblog?sslmode=disable"
-	DatabaseURL = "postgres://usr:pwd@localhost:5432/simpleblog?sslmode=disable"
+	DatabaseURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
 	InitDBQuery = `
 -- Create some required DB settings (Only first time)
 -- Set timezone to Yekaterinburg (GMT+05)
@@ -104,8 +110,8 @@ VALUES
 )
 
 var (
-	_                objrepo.Storage[*models.User] = &PgDB[*models.User]{}
-	_                objrepo.Storage[*models.Link] = &PgDB[*models.Link]{}
+	_                objrepo.Storage[*models.User] = &DB[*models.User]{}
+	_                objrepo.Storage[*models.Link] = &DB[*models.Link]{}
 	ErrNotFound                                    = errors.New("not found")
 	ErrMultipleFound                               = errors.New("multiple found")
 )
@@ -134,113 +140,108 @@ func AddDemoData(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-type PgDB[T objrepo.Modelable] struct {
+type DB[T objrepo.Modelable] struct {
 	pool *pgxpool.Pool
 }
 
-func PgDBNew[T objrepo.Modelable](p *pgxpool.Pool) *PgDB[T] {
-	return &PgDB[T]{
+func DBNew[T objrepo.Modelable](p *pgxpool.Pool) *DB[T] {
+	return &DB[T]{
 		pool: p,
 	}
 }
 
-func (db *PgDB[T]) Create(ctx context.Context, obj T) (int, error) {
-	var (
-		id    int
-		query string
-	)
+func (db *DB[T]) Create(ctx context.Context, obj T) (id int, err error) {
 	fields := obj.GetList()
-	switch obj.GetType() {
-	case "User":
-		query = UserCreate
-	case "Link":
-		query = LinkCreate
-	case "Clicker":
-		panic("Need to implement Create.Clicker")
-	default:
-		panic("Non Modelable type received")
-	}
+	query := switchQuery(obj, CreateQuery)
 	res := db.pool.QueryRow(
 		ctx, query, fields...,
 	)
-	err := res.Scan(&id)
-	if err != nil {
-		//span.LogFields(log.Error(err))
-		return 0, err
-	}
-	//span.LogFields(
-	//	log.String("User result", user.String()),
-	//)
-	return id, nil
+	err = res.Scan(&id)
+	return
 }
 
-func (db *PgDB[T]) Read(ctx context.Context, id int, obj T) (T, error) {
-	var (
-		query string
-		err   error
-		found bool
-	)
-
-	switch obj.GetType() {
-	case models.UserType:
-		query = UserSelectByID
-	case models.LinkType:
-		query = LinkSelectByID
-	default:
-		panic("Non Modelable type received")
-	}
-
+func (db *DB[T]) Read(ctx context.Context, id int, obj T) (T, error) {
+	query := switchQuery(obj, ReadQuery)
 	rows, err := db.pool.Query(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}
+	return getObjectFromRows(rows, obj, id)
+}
 
+func (db *DB[T]) Update(ctx context.Context, obj T, newObj T) error {
+	//var defaultObj T
+	dbTable := switchQuery(obj, UpdateQuery)
+
+	UpdateQuery, err := UpdateQueryCompilation(dbTable, obj, newObj)
+	if err != nil {
+		err = fmt.Errorf("cannot compile query: %w", err)
+		return err
+	}
+	res, err := db.pool.Exec(ctx, UpdateQuery)
+	if err != nil {
+		return err
+	}
+	return checkRowsAffected(res, "update", obj)
+}
+
+func (db *DB[T]) Delete(ctx context.Context, id int) error {
+	var (
+		obj T
+		err error
+	)
+	query := switchQuery(obj, DeleteQuery)
+
+	res, err := db.pool.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return checkRowsAffected(res, "delete", obj)
+}
+
+func switchQuery[T objrepo.Modelable](obj T, queryType int) (query string) {
+	switch obj.GetType() {
+	case models.UserType:
+		switch queryType {
+		case CreateQuery:
+			query = UserCreate
+		case ReadQuery:
+			query = UserSelectByID
+		case UpdateQuery:
+			query = UserTable
+		case DeleteQuery:
+			query = UserDeleteByID
+		}
+	case models.LinkType:
+		switch queryType {
+		case CreateQuery:
+			query = LinkCreate
+		case ReadQuery:
+			query = LinkSelectByID
+		case UpdateQuery:
+			query = LinkTable
+		case DeleteQuery:
+			query = LinkDeleteByID
+		}
+	default:
+		panic("Non Modelable type received")
+	}
+	return
+}
+
+func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T, id int) (T, error) {
+	var (
+		found bool
+		err   error
+	)
 	for rows.Next() {
 		if found {
-			err := fmt.Errorf("%w: user id %d", ErrMultipleFound, id)
+			err = fmt.Errorf("%w: user id %d", ErrMultipleFound, id)
 			return nil, err
 		}
-		switch obj.GetType() {
-		case models.UserType:
-			var (
-				id                                                    int
-				username, password, firstName, lastName, email, phone string
-				userstatus                                            bool
-			)
-			if err := rows.Scan(&id, &username, &password, &firstName, &lastName, &email, &phone, &userstatus); err != nil {
-				return nil, err
-			}
-			mObjFields := map[string]interface{}{
-				"id":          id,
-				"username":    username,
-				"password":    password,
-				"first_name":  firstName,
-				"last_name":   lastName,
-				"email":       email,
-				"phone":       phone,
-				"user_status": userstatus,
-			}
-			obj.Set(mObjFields)
-		case models.LinkType:
-			var (
-				id, clickCounter, ownerId int
-				shortLink, longLink       string
-				isActive                  bool
-			)
-			if err := rows.Scan(&id, &shortLink, &longLink, &clickCounter, &ownerId, &isActive); err != nil {
-				return nil, err
-			}
-			mObjFields := map[string]interface{}{
-				"id":            id,
-				"short_link":    shortLink,
-				"long_link":     longLink,
-				"click_counter": clickCounter,
-				"owner_id":      ownerId,
-				"is_active":     isActive,
-			}
-			obj.Set(mObjFields)
-		default:
-			panic("Non Modelable type received")
+		obj, err = setObjFields(rows, obj)
+		if err != nil {
+			return nil, err
 		}
 		found = true
 	}
@@ -251,128 +252,77 @@ func (db *PgDB[T]) Read(ctx context.Context, id int, obj T) (T, error) {
 		err := fmt.Errorf("%w: user id %d", ErrNotFound, id)
 		return nil, err
 	}
-
 	return obj, nil
 }
 
-func (db *PgDB[T]) Update(ctx context.Context, obj T) (T, error) {
-	//span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, db.tracer,
-	//	"UserStore.Update")
-	//defer span.Finish()
-	var (
-		defaultObj T
-		dbTable    string
-	)
-
+func setObjFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	switch obj.GetType() {
 	case models.UserType:
-		dbTable = UserTable
+		return setUserFields(rows, obj)
 	case models.LinkType:
-		dbTable = LinkTable
+		return setLinkFields(rows, obj)
 	default:
 		panic("Non Modelable type received")
 	}
-
-	UpdateQuery, err := UpdateQueryCompilation(dbTable, obj, defaultObj)
-	if err != nil {
-		err = fmt.Errorf("cannot compile query: %w", err)
-		//span.LogFields(log.Error(err))
-		return defaultObj, err
-	}
-	//span.LogFields(
-	//	log.String("query", UpdateQuery),
-	//	log.String("arg0", user.String()),
-	//)
-	res, err := db.pool.Exec(ctx, UpdateQuery)
-	if err != nil {
-		//span.LogFields(log.Error(err))
-		return defaultObj, err
-	}
-
-	if rowsAffected := res.RowsAffected(); rowsAffected != 1 {
-		err = fmt.Errorf("update user error: %d rows affected", rowsAffected)
-		//span.LogFields(log.Error(err))
-		return defaultObj, err
-	}
-	//span.LogFields(
-	//	log.String("User result", user.String()),
-	//)
-	return obj, nil
 }
 
-func (db *PgDB[T]) Delete(ctx context.Context, id int) error {
-	//span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, db.tracer,
-	//	"UserStore.Delete")
-	//defer span.Finish()
-	//span.LogFields(
-	//	log.String("query", UserDeleteByID),
-	//	log.String("arg0", strconv.Itoa(id)),
-	//)
+func setUserFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	var (
-		obj   T
-		query string
-		err   error
+		id                                                    int
+		username, password, firstName, lastName, email, phone string
+		userstatus                                            bool
 	)
-
-	switch obj.GetType() {
-	case models.UserType:
-		query = UserDeleteByID
-	case models.LinkType:
-		query = LinkDeleteByID
-	default:
-		panic("Non Modelable type received")
+	if err := rows.Scan(&id, &username, &password, &firstName, &lastName, &email, &phone, &userstatus); err != nil {
+		return nil, err
 	}
-	res, err := db.pool.Exec(ctx, query, id)
-	if err != nil {
-		//span.LogFields(log.Error(err))
-		return err
+	mObjFields := map[string]interface{}{
+		"id":          id,
+		"username":    username,
+		"password":    password,
+		"first_name":  firstName,
+		"last_name":   lastName,
+		"email":       email,
+		"phone":       phone,
+		"user_status": userstatus,
 	}
-	if rowsAffected := res.RowsAffected(); rowsAffected != 1 {
-		err = fmt.Errorf("delete object error: %d rows affected", rowsAffected)
-		//span.LogFields(log.Error(err))
-		return err
-	}
-	//span.LogFields(
-	//	log.String("Deleted user with id", strconv.Itoa(id)),
-	//)
-	return nil
+	err := obj.Set(mObjFields)
+	return obj, err
 }
 
-func UpdateQueryCompilation(dbTable string, obj interface{}, defaultObj interface{}) (string, error) {
-	objMap, err := structToMap(obj)
-	if err != nil {
-		return "", fmt.Errorf("convert error: %w", err)
+func setLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+	var (
+		id, clickCounter, ownerID int
+		shortLink, longLink       string
+		isActive                  bool
+	)
+	if err := rows.Scan(&id, &shortLink, &longLink, &clickCounter, &ownerID, &isActive); err != nil {
+		return nil, err
+	}
+	mObjFields := map[string]interface{}{
+		"id":            id,
+		"short_link":    shortLink,
+		"long_link":     longLink,
+		"click_counter": clickCounter,
+		"owner_id":      ownerID,
+		"is_active":     isActive,
+	}
+	err := obj.Set(mObjFields)
+	return obj, err
+}
+
+func UpdateQueryCompilation(dbTable string, obj interface{}, newObj interface{}) (string, error) {
+	objMap, err1 := structToMap(obj)
+	newObjMap, err2 := structToMap(newObj)
+	if err1 != nil || err2 != nil {
+		return "", fmt.Errorf("convert object error")
 	}
 	id, ok := objMap["id"]
 	if !ok {
-		return "", fmt.Errorf("no id specified: %w", err)
-	}
-	defaultObjMap, err := structToMap(defaultObj)
-	if err != nil {
-		return "", fmt.Errorf("convert error: %w", err)
+		return "", fmt.Errorf("no id specified for %v", obj)
 	}
 
-	fields := make([]string, 0, len(objMap))
-	values := make([]string, 0, len(objMap))
-	for k, v := range objMap {
-		if k == "id" {
-			continue
-		}
-		if v != defaultObjMap[k] {
-			fields = append(fields, k)
-			var vStr string
-			switch v.(type) {
-			case bool:
-				vStr = strconv.FormatBool(v.(bool))
-			case float64:
-				vStr = strconv.FormatFloat(v.(float64), 'f', 0, 64)
-			case string:
-				vStr = v.(string)
-			}
-			values = append(values, fmt.Sprintf("'%s'", vStr))
-		}
-	}
 	var fmtStr string
+	fields, values := getChangedFieldsAndValues(objMap, newObjMap)
 	if len(values) < 2 {
 		fmtStr = "UPDATE %s SET %s = (%s) WHERE id = %.0f;"
 	} else {
@@ -386,8 +336,32 @@ func UpdateQueryCompilation(dbTable string, obj interface{}, defaultObj interfac
 		strings.Join(values, ","),
 		id,
 	)
-
 	return query, nil
+}
+
+func getChangedFieldsAndValues(objMap, newObjMap map[string]interface{}) (fields, values []string) {
+	for k, v := range newObjMap {
+		if k == "id" {
+			continue
+		}
+		if v != objMap[k] {
+			fields = append(fields, k)
+			var (
+				vStr           string
+				strconvBitSize = 64
+			)
+			switch v := v.(type) {
+			case bool:
+				vStr = strconv.FormatBool(v)
+			case float64:
+				vStr = strconv.FormatFloat(v, 'f', 0, strconvBitSize)
+			case string:
+				vStr = v
+			}
+			values = append(values, fmt.Sprintf("'%s'", vStr))
+		}
+	}
+	return
 }
 
 func structToMap(s interface{}) (m map[string]interface{}, err error) {
@@ -400,4 +374,12 @@ func structToMap(s interface{}) (m map[string]interface{}, err error) {
 		return nil, fmt.Errorf("cannot unmarshal to map: %w", err)
 	}
 	return m, nil
+}
+
+func checkRowsAffected[T objrepo.Modelable](res pgconn.CommandTag, operation string, obj T) error {
+	if rowsAffected := res.RowsAffected(); rowsAffected != 1 {
+		err := fmt.Errorf("%s %s error: %d rows affected", operation, obj.GetType(), rowsAffected)
+		return err
+	}
+	return nil
 }

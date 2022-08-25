@@ -24,7 +24,6 @@ func (u *User) GetType() string {
 }
 
 func (u *User) GetList() (lst []interface{}) {
-	//lst = append(l, u.Username, u.Password, u.FirstName, u.LastName, u.Email, u.Phone, u.UserStatus)
 	lst = append(lst, u.Username, u.Password, u.FirstName, u.LastName, u.Email, u.Phone, u.UserStatus)
 	return
 }

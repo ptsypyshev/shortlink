@@ -23,8 +23,7 @@ func (l *Link) GetType() string {
 }
 
 func (l *Link) GetList() (lst []interface{}) {
-	//lst = append(l, u.ShortLink, l.LongLink, l.ClickCounter, l.OwnerID, l.Status, l.Clickers)
-	lst = append(lst, "testLink", l.LongLink, l.ClickCounter, l.OwnerID, l.IsActive)
+	lst = append(lst, l.ShortLink, l.LongLink, l.ClickCounter, l.OwnerID, l.IsActive)
 	return
 }
 
