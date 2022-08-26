@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const UserType = "User"
+const UserType = "user"
 
 type User struct {
 	ID         int    `json:"id,omitempty" mapstructure:"id"`

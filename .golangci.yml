@@ -94,7 +94,6 @@ linters:
     - noctx
     - nolintlint
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
@@ -102,13 +101,14 @@ linters:
     - unused
     - varcheck
     - whitespace
-
+  # disabled due generics trouble
+  # - gocritic
+  # - structcheck
   # don't enable:
   # - asciicheck
   # - scopelint
   # - gochecknoglobals
   # - gocognit
-  # - gocritic
   # - godot
   # - godox
   # - goerr113

@@ -23,6 +23,7 @@ const (
 	ReadQuery
 	UpdateQuery
 	DeleteQuery
+	SearchQuery
 
 	UserTable      = "users"
 	UserSelectByID = `SELECT * FROM users WHERE id = $1;`
@@ -33,6 +34,8 @@ VALUES
     ($1, crypt($2, gen_salt('bf', 8)), $3, $4, $5, $6, $7)
 RETURNING id;
 `
+	//UserSelectByField = `SELECT * FROM users WHERE $1 = $2;`
+	UserSelectByField = `SELECT * FROM users WHERE username = $1;`
 
 	LinkTable      = "links"
 	LinkSelectByID = `SELECT * FROM links WHERE id = $1;`
@@ -43,6 +46,21 @@ VALUES
     ($1, $2, $3, $4, $5)
 RETURNING id;
 `
+
+	//LinkSelectByField = `SELECT * FROM links WHERE $1 = $2;`
+	LinkSelectByField = `SELECT * FROM links WHERE owner_id = $1;`
+
+	ShortLinkTable      = "shortlinks"
+	ShortLinkSelectByID = `SELECT * FROM shortlinks WHERE id = $1;`
+	ShortLinkDeleteByID = `DELETE FROM shortlinks WHERE id = $1;`
+	ShortLinkCreate     = `
+INSERT INTO shortlinks(token, long_link_id)
+VALUES
+    ($1, $2)
+RETURNING id;
+`
+	//ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE $1 = $2;`
+	ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE token = $1;`
 
 	//DatabaseURL = "postgres://usr:pwd@postgres:5432/simpleblog?sslmode=disable"
 	DatabaseURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
@@ -56,7 +74,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Drop All Tables and Extensions
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS links CASCADE;
-DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS shortlinks;
  
 -- Create New Tables
 CREATE TABLE IF NOT EXISTS users
@@ -77,9 +95,16 @@ CREATE TABLE IF NOT EXISTS links
 	short_link VARCHAR(255) NOT NULL UNIQUE,
 	long_link TEXT NOT NULL,
 	click_counter INT,
-	owner_id INT,
-	is_active BOOL,
-	FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+	owner_id INT REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	is_active BOOL
+);
+
+CREATE TABLE IF NOT EXISTS shortlinks
+(
+	id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	token VARCHAR(255) NOT NULL UNIQUE,
+	long_link_id INT NOT NULL UNIQUE REFERENCES links (id) ON DELETE CASCADE ON UPDATE CASCADE
+	
 );
 `
 	InitDemoQuery = `
@@ -106,6 +131,20 @@ VALUES
 	('tr17bwgh9', 'https://timeweb.ru', 23, 4, true),
 	('s4yhrr9qz', 'https://ozon.ru', 44, 3, true),
 	('y6tm3rpas', 'https://stackoverflow.com', 58, 2, true);
+
+-- Insert Links
+INSERT INTO shortlinks(token, long_link_id)
+VALUES
+	('5tng0asdf', 1),
+	('gt3sdahu7', 2),
+	('9mmsgtt20', 3),
+	('n3opkvjn9', 4),
+	('q34ssng91', 5),
+	('f82npaq2v', 6),
+	('x5wst0rq2', 7),
+	('tr17bwgh9', 8),
+	('s4yhrr9qz', 9),
+	('y6tm3rpas', 10);
 `
 )
 
@@ -169,11 +208,26 @@ func (db *DB[T]) Read(ctx context.Context, id int, obj T) (T, error) {
 	return getObjectFromRows(rows, obj, id)
 }
 
-func (db *DB[T]) Update(ctx context.Context, obj T, newObj T) error {
-	//var defaultObj T
-	dbTable := switchQuery(obj, UpdateQuery)
+func (db *DB[T]) Search(ctx context.Context, field any, value any, obj T) ([]T, error) {
+	//var obj T // obj всегда будет nil
+	//var obj = &T{} // obj нельзя инициализировать таким образом, будет ошибка
+	//Нужно передавать заранее созданный объект через параметры функции
 
-	UpdateQuery, err := UpdateQueryCompilation(dbTable, obj, newObj)
+	query := switchQuery(obj, SearchQuery)
+
+	fmt.Printf("Field: %v, value: %v\n", field, value)
+	//rows, err := db.pool.Query(ctx, query, field, value)
+	rows, err := db.pool.Query(ctx, query, value)
+
+	if err != nil {
+		return nil, err
+	}
+	return getObjectsFromRows(rows, obj)
+}
+
+func (db *DB[T]) Update(ctx context.Context, obj T, newObj T) error {
+	dbTable := switchQuery(obj, UpdateQuery)
+	UpdateQuery, err := updateQueryCompilation(dbTable, obj, newObj)
 	if err != nil {
 		err = fmt.Errorf("cannot compile query: %w", err)
 		return err
@@ -202,29 +256,67 @@ func (db *DB[T]) Delete(ctx context.Context, id int) error {
 func switchQuery[T objrepo.Modelable](obj T, queryType int) (query string) {
 	switch obj.GetType() {
 	case models.UserType:
-		switch queryType {
-		case CreateQuery:
-			query = UserCreate
-		case ReadQuery:
-			query = UserSelectByID
-		case UpdateQuery:
-			query = UserTable
-		case DeleteQuery:
-			query = UserDeleteByID
-		}
+		query = switchUserQuery(queryType)
 	case models.LinkType:
-		switch queryType {
-		case CreateQuery:
-			query = LinkCreate
-		case ReadQuery:
-			query = LinkSelectByID
-		case UpdateQuery:
-			query = LinkTable
-		case DeleteQuery:
-			query = LinkDeleteByID
-		}
+		query = switchLinkQuery(queryType)
+	case models.ShortLinkType:
+		query = switchShortLinkQuery(queryType)
 	default:
 		panic("Non Modelable type received")
+	}
+	return
+}
+
+func switchUserQuery(queryType int) (query string) {
+	switch queryType {
+	case CreateQuery:
+		query = UserCreate
+	case ReadQuery:
+		query = UserSelectByID
+	case UpdateQuery:
+		query = UserTable
+	case DeleteQuery:
+		query = UserDeleteByID
+	case SearchQuery:
+		query = UserSelectByField
+	default:
+		panic("Unknown query type")
+	}
+	return
+}
+
+func switchLinkQuery(queryType int) (query string) {
+	switch queryType {
+	case CreateQuery:
+		query = LinkCreate
+	case ReadQuery:
+		query = LinkSelectByID
+	case UpdateQuery:
+		query = LinkTable
+	case DeleteQuery:
+		query = LinkDeleteByID
+	case SearchQuery:
+		query = LinkSelectByField
+	default:
+		panic("Unknown query type")
+	}
+	return
+}
+
+func switchShortLinkQuery(queryType int) (query string) {
+	switch queryType {
+	case CreateQuery:
+		query = ShortLinkCreate
+	case ReadQuery:
+		query = ShortLinkSelectByID
+	case UpdateQuery:
+		query = ShortLinkTable
+	case DeleteQuery:
+		query = ShortLinkDeleteByID
+	case SearchQuery:
+		query = ShortLinkSelectByField
+	default:
+		panic("Unknown query type")
 	}
 	return
 }
@@ -255,12 +347,30 @@ func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T, id int) (T, er
 	return obj, nil
 }
 
+func getObjectsFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) ([]T, error) {
+	var err error
+	sliceObjectsT := make([]T, 0)
+	for rows.Next() {
+		obj, err = setObjFields(rows, obj)
+		if err != nil {
+			return nil, err
+		}
+		sliceObjectsT = append(sliceObjectsT, obj)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return sliceObjectsT, nil
+}
+
 func setObjFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	switch obj.GetType() {
 	case models.UserType:
 		return setUserFields(rows, obj)
 	case models.LinkType:
 		return setLinkFields(rows, obj)
+	case models.ShortLinkType:
+		return setShortLinkFields(rows, obj)
 	default:
 		panic("Non Modelable type received")
 	}
@@ -310,7 +420,24 @@ func setLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	return obj, err
 }
 
-func UpdateQueryCompilation(dbTable string, obj interface{}, newObj interface{}) (string, error) {
+func setShortLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+	var (
+		id, longLinkID int
+		token          string
+	)
+	if err := rows.Scan(&id, &token, &longLinkID); err != nil {
+		return nil, err
+	}
+	mObjFields := map[string]interface{}{
+		"id":           id,
+		"token":        token,
+		"long_link_id": longLinkID,
+	}
+	err := obj.Set(mObjFields)
+	return obj, err
+}
+
+func updateQueryCompilation(dbTable string, obj interface{}, newObj interface{}) (string, error) {
 	objMap, err1 := structToMap(obj)
 	newObjMap, err2 := structToMap(newObj)
 	if err1 != nil || err2 != nil {
@@ -339,6 +466,18 @@ func UpdateQueryCompilation(dbTable string, obj interface{}, newObj interface{})
 	return query, nil
 }
 
+func structToMap(s interface{}) (m map[string]interface{}, err error) {
+	j, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse json: %w", err)
+	}
+	err = json.Unmarshal(j, &m)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal to map: %w", err)
+	}
+	return m, nil
+}
+
 func getChangedFieldsAndValues(objMap, newObjMap map[string]interface{}) (fields, values []string) {
 	for k, v := range newObjMap {
 		if k == "id" {
@@ -362,18 +501,6 @@ func getChangedFieldsAndValues(objMap, newObjMap map[string]interface{}) (fields
 		}
 	}
 	return
-}
-
-func structToMap(s interface{}) (m map[string]interface{}, err error) {
-	j, err := json.Marshal(s)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse json: %w", err)
-	}
-	err = json.Unmarshal(j, &m)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal to map: %w", err)
-	}
-	return m, nil
 }
 
 func checkRowsAffected[T objrepo.Modelable](res pgconn.CommandTag, operation string, obj T) error {

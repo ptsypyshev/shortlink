@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const LinkType = "Link"
+const LinkType = "link"
 
 type Link struct {
 	ID           int    `json:"id,omitempty" mapstructure:"id"`
@@ -31,10 +31,11 @@ func (l *Link) Set(m map[string]interface{}) error {
 	if err := mapstructure.Decode(m, &l); err != nil {
 		return err
 	}
+	//fmt.Println(l)
 	return nil
 }
 
 func (l *Link) String() string {
-	return fmt.Sprintf("{\nID: %d\nShorkLink: %s\nLongLink: %s\nClickCounter: %d\nOwnerID: %v\nStatus: %t\n}",
+	return fmt.Sprintf("{\nID: %d\nShortLink: %s\nLongLink: %s\nClickCounter: %d\nOwnerID: %v\nStatus: %t\n}",
 		l.ID, l.ShortLink, l.LongLink, l.ClickCounter, l.OwnerID, l.IsActive)
 }
