@@ -41,9 +41,9 @@ RETURNING id;
 	LinkSelectByID = `SELECT * FROM links WHERE id = $1;`
 	LinkDeleteByID = `DELETE FROM links WHERE id = $1;`
 	LinkCreate     = `
-INSERT INTO links(short_link, long_link, click_counter, owner_id, is_active)
+INSERT INTO links(long_link, click_counter, owner_id, is_active)
 VALUES
-    ($1, $2, $3, $4, $5)
+    ($1, $2, $3, $4)
 RETURNING id;
 `
 
@@ -92,7 +92,6 @@ CREATE TABLE IF NOT EXISTS users
 CREATE TABLE IF NOT EXISTS links
 (
 	id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	short_link VARCHAR(255) NOT NULL UNIQUE,
 	long_link TEXT NOT NULL,
 	click_counter INT,
 	owner_id INT REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -119,32 +118,32 @@ VALUES
 	('ssidorov', crypt('sidrtest', gen_salt('bf', 8)), 'Sidor', 'Sidorov', 'ssidorov@example.loc', '111', 'true');
 
 -- Insert Links
-INSERT INTO links(short_link, long_link, click_counter, owner_id, is_active)
+INSERT INTO links(long_link, click_counter, owner_id, is_active)
 VALUES
-	('5tng0asdf', 'https://ya.ru', 100, 2, true),
-	('gt3sdahu7', 'https://mail.ru', 33, 3, true),
-	('9mmsgtt20', 'https://gb.ru', 1, 4, true),
-	('n3opkvjn9', 'https://google.com', 60, 5, true),
-	('q34ssng91', 'https://oracle.com', 5, 6, false),
-	('f82npaq2v', 'https://aws.com', 18, 6, true),
-	('x5wst0rq2', 'https://reg.ru', 7, 5, true),
-	('tr17bwgh9', 'https://timeweb.ru', 23, 4, true),
-	('s4yhrr9qz', 'https://ozon.ru', 44, 3, true),
-	('y6tm3rpas', 'https://stackoverflow.com', 58, 2, true);
+	('https://ya.ru', 100, 2, true),
+	('https://mail.ru', 33, 3, true),
+	('https://gb.ru', 1, 4, true),
+	('https://google.com', 60, 5, true),
+	('https://oracle.com', 5, 6, false),
+	('https://aws.com', 18, 6, true),
+	('https://reg.ru', 7, 5, true),
+	('https://timeweb.ru', 23, 4, true),
+	('https://ozon.ru', 44, 3, true),
+	('https://stackoverflow.com', 58, 2, true);
 
 -- Insert Links
 INSERT INTO shortlinks(token, long_link_id)
 VALUES
-	('5tng0asdf', 1),
-	('gt3sdahu7', 2),
-	('9mmsgtt20', 3),
-	('n3opkvjn9', 4),
-	('q34ssng91', 5),
-	('f82npaq2v', 6),
-	('x5wst0rq2', 7),
-	('tr17bwgh9', 8),
-	('s4yhrr9qz', 9),
-	('y6tm3rpas', 10);
+	('p2z68d', 1),
+	('08ky2q', 2),
+	('429785', 3),
+	('z86w2k', 4),
+	('l8wxrd', 5),
+	('y2ld8p', 6),
+	('wrvdr9', 7),
+	('q85w8m', 8),
+	('6rn32e', 9),
+	('yr7grg', 10);
 `
 )
 
@@ -402,15 +401,14 @@ func setUserFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 func setLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	var (
 		id, clickCounter, ownerID int
-		shortLink, longLink       string
+		longLink                  string
 		isActive                  bool
 	)
-	if err := rows.Scan(&id, &shortLink, &longLink, &clickCounter, &ownerID, &isActive); err != nil {
+	if err := rows.Scan(&id, &longLink, &clickCounter, &ownerID, &isActive); err != nil {
 		return nil, err
 	}
 	mObjFields := map[string]interface{}{
 		"id":            id,
-		"short_link":    shortLink,
 		"long_link":     longLink,
 		"click_counter": clickCounter,
 		"owner_id":      ownerID,

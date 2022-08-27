@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	HashSalt      = "SaltForTheProject2022"
-	HashMinLength = 6
+	HashSalt          = "SaltForTheProject2022"
+	HashSmallAlphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
+	HashMinLength     = 6
 )
 
 type Modelable interface {
@@ -132,7 +133,7 @@ func LinksNew(s Storage[*models.Link], l *zap.Logger) *Links {
 func (l Links) Create(ctx context.Context, link *models.Link) (*models.Link, error) {
 	id, err := l.store.Create(ctx, link)
 	if err != nil {
-		l.logger.Error(fmt.Sprintf(`cannot read link: %s`, err))
+		l.logger.Error(fmt.Sprintf(`cannot create link: %s`, err))
 		return nil, fmt.Errorf("cannot create link: %w", err)
 	}
 	link.ID = id
@@ -255,6 +256,7 @@ func (s ShortLinks) Delete(ctx context.Context, id int) (*models.ShortLink, erro
 
 func GenerateShortLinkToken(id int) (string, error) {
 	hd := hashids.NewData()
+	hd.Alphabet = HashSmallAlphabet
 	hd.Salt = HashSalt
 	hd.MinLength = HashMinLength
 	h, err := hashids.NewWithData(hd)

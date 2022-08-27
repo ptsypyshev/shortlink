@@ -10,8 +10,8 @@ const UserType = "user"
 
 type User struct {
 	ID         int    `json:"id,omitempty" mapstructure:"id"`
-	Username   string `json:"username,omitempty" mapstructure:"username"`
-	Password   string `json:"password,omitempty" mapstructure:"password"`
+	Username   string `json:"username,omitempty" mapstructure:"username" form:"username"`
+	Password   string `json:"password,omitempty" mapstructure:"password" form:"password"`
 	FirstName  string `json:"first_name,omitempty" mapstructure:"first_name"`
 	LastName   string `json:"last_name,omitempty" mapstructure:"last_name"`
 	Email      string `json:"email,omitempty" mapstructure:"email"`
