@@ -30,6 +30,15 @@ func (s *ShortLink) Set(m map[string]interface{}) error {
 	return nil
 }
 
+func (s *ShortLink) Get() map[string]interface{} {
+	mShortLinkFields := map[string]interface{}{
+		"id":           s.ID,
+		"token":        s.Token,
+		"long_link_id": s.LongLinkID,
+	}
+	return mShortLinkFields
+}
+
 func (s *ShortLink) String() string {
 	return fmt.Sprintf("{\nID: %d\nToken: %s\nLongLinkID: %d\n}",
 		s.ID, s.Token, s.LongLinkID)

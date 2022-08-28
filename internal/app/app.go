@@ -11,6 +11,8 @@ import (
 	"github.com/ptsypyshev/shortlink/internal/repositories/objrepo"
 
 	//nice "github.com/ekyoung/gin-nice-recovery"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -62,29 +64,41 @@ func (a *App) Init() error {
 
 func (a *App) Serve() error {
 	//Initialize Router and add Middleware
-	a.router = gin.Default()
+	a.router = gin.New()
 	a.router.Static("/static", "./web/static")
 	a.router.LoadHTMLGlob("web/templates/*")
+	a.router.Use(sessions.Sessions("session", cookie.NewStore([]byte("secret"))))
 
 	//Routes
-	a.router.GET("/", a.HandlerIndex)
-	a.router.GET("/:token", a.HandlerShortLink)
-	a.router.GET("/login", a.HandlerLoginPage)
-	a.router.POST("/login", a.HandlerLogin)
-	a.router.GET("/api/", a.HandlerAPIHelp)
-	a.router.GET("/dbinit/", a.HandlerInitSchema)
-	a.router.GET("/demodb/", a.HandlerAddDemoData)
+	public := a.router.Group("/")
+	{
+		public.GET("/", a.HandlerIndex)
+		public.GET("/:token", a.HandlerShortLink)
+		//public.GET("/api/", a.HandlerAPIHelp)
+		public.GET("/login", a.HandlerLoginPage)
+		public.POST("/login", a.HandlerLogin)
+		public.POST("/api/links/", a.CreateLink)
+	}
 
-	a.router.GET("/api/users/:id", a.GetUser)
-	a.router.POST("/api//users/", a.CreateUser)
-	a.router.PUT("/api/users/", a.UpdateUser)
-	a.router.DELETE("/api/users/:id", a.DeleteUser)
+	private := a.router.Group("/")
+	private.Use(AuthRequired)
+	{
+		private.GET("/dbinit/", a.HandlerInitSchema)
+		private.GET("/demodb/", a.HandlerAddDemoData)
+		private.GET("/api/", a.HandlerAPIHelp)
+		private.GET("/dashboard/", a.HandlerDashboard)
 
-	a.router.GET("/api//links/:id", a.GetLink)
-	a.router.POST("/api//links/", a.CreateLink)
-	a.router.PUT("/api//links/", a.UpdateLink)
-	a.router.DELETE("/api//links/:id", a.DeleteLink)
+		private.GET("/api/users/:id", a.GetUser)
+		private.POST("/api//users/", a.CreateUser)
+		private.PUT("/api/users/", a.UpdateUser)
+		private.DELETE("/api/users/:id", a.DeleteUser)
+		private.GET("/api/users/:id/links", a.SearchLinks)
 
-	// Start serving the application
+		private.GET("/api/links/:id", a.GetLink)
+		//private.POST("/api//links/", a.CreateLink)
+		private.PUT("/api/links/", a.UpdateLink)
+		private.DELETE("/api/links/:id", a.DeleteLink)
+	}
+
 	return a.router.Run()
 }

@@ -79,6 +79,7 @@ linters:
     - funlen
     - gochecknoinits
     - goconst
+#    - gocritic
     - gocyclo
     - gofmt
     - goimports
@@ -94,6 +95,7 @@ linters:
     - noctx
     - nolintlint
     - staticcheck
+#    - structcheck
     - stylecheck
     - typecheck
     - unconvert
@@ -126,7 +128,11 @@ issues:
     - path: _test\.go
       linters:
         - gomnd
-
+    - path: internal/db/pgdb/pgdb.go
+      linters:
+        - gosec
+        - gocritic
+        - structcheck
     - path: pkg/golinters/errcheck.go
       text: "SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead"
     - path: pkg/commands/run.go

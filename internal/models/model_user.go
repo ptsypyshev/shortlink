@@ -35,6 +35,20 @@ func (u *User) Set(m map[string]interface{}) error {
 	return nil
 }
 
+func (u *User) Get() map[string]interface{} {
+	mUserFields := map[string]interface{}{
+		"id":          u.ID,
+		"username":    u.Username,
+		"password":    u.Password,
+		"first_name":  u.FirstName,
+		"last_name":   u.LastName,
+		"email":       u.Email,
+		"phone":       u.Phone,
+		"user_status": u.UserStatus,
+	}
+	return mUserFields
+}
+
 func (u *User) String() string {
 	return fmt.Sprintf("{\nID: %d\nUsername: %s\nPassword: %s\nFirstName: %s\nLastName: %s\nEmail: %s\nPhone: %s\nUserStatus: %t\n}",
 		u.ID, u.Username, u.Password, u.FirstName, u.LastName, u.Email, u.Phone, u.UserStatus)

@@ -2,9 +2,14 @@
 <html lang="en">
 {{ template "header" .}}
 <body class="text-center">
+<p>
+    User Session is {{ .user_session }}
+</p>
 <main class="form-signin">
     <form action="/login" method="post">
-        <img class="mb-4" src="/static/img/logo.png" alt="" width="330px">
+        <a href="/">
+            <img class="mb-4" src="/static/img/logo.png" alt="" width="330px">
+        </a>
         <h1 class="h3 mb-3 fw-normal">Пожалуйста, войдите</h1>
 
         <div class="form-floating">

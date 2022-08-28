@@ -1,26 +1,18 @@
 Vue.createApp({
     delimiters: ['{%', '%}'],
     data: () => ({
-        shortlink: {
-            longLink: "",
-            shortURL: "",
-        },
+        user: "",
+        links: [],
         showResult: false,
         isURLValid: false,
     }),
     methods: {
-        change:function(e){
-            const url = e.target.value
-            this.showResult = false
-            this.isURLValid = validator.isURL(this.shortlink.longLink, {require_protocol: true});
-        },
-        shortenLink() {
+        getLinks() {
             const requestOptions = {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "long_link": this.shortlink.longLink, "is_active":true })
+                method: 'GET'
             };
-            fetch('/api/links/', requestOptions)
+            let id = document.querySelector('meta[name="userid"]').content;
+            fetch('/api/users/'+id+'/links/', requestOptions)
                 .then(async response => {
                     const data = await response.json();
                     // check for error response
@@ -29,8 +21,7 @@ Vue.createApp({
                         const error = (data && data.message) || response.status;
                         return Promise.reject(error);
                     }
-                    var newUrl = window.location.protocol + "//" + window.location.host + "/" + data.created;
-                    this.shortlink.shortURL = newUrl;
+                    this.links = data.found;
                 })
                 .catch(error => {
                     this.errorMessage = error;
@@ -39,4 +30,7 @@ Vue.createApp({
             this.showResult = true;
         }
     },
-}).mount('.shortener');
+    beforeMount(){
+        this.getLinks()
+    },
+}).mount('.linklist');

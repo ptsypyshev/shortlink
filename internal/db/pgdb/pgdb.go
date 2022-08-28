@@ -24,6 +24,7 @@ const (
 	UpdateQuery
 	DeleteQuery
 	SearchQuery
+	CheckQuery
 
 	UserTable      = "users"
 	UserSelectByID = `SELECT * FROM users WHERE id = $1;`
@@ -36,6 +37,7 @@ RETURNING id;
 `
 	//UserSelectByField = `SELECT * FROM users WHERE $1 = $2;`
 	UserSelectByField = `SELECT * FROM users WHERE username = $1;`
+	UserCheckPW       = `SELECT * FROM users WHERE username = $1 AND password = crypt($2, password);`
 
 	LinkTable      = "links"
 	LinkSelectByID = `SELECT * FROM links WHERE id = $1;`
@@ -154,6 +156,11 @@ var (
 	ErrMultipleFound                               = errors.New("multiple found")
 )
 
+type Rowsable interface {
+	//pgx.Rows | pgx.Row
+	Scan(dest ...interface{}) error
+}
+
 func InitDB(ctx context.Context, logger *zap.Logger) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(DatabaseURL)
 	if err != nil {
@@ -204,7 +211,7 @@ func (db *DB[T]) Read(ctx context.Context, id int, obj T) (T, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getObjectFromRows(rows, obj, id)
+	return getObjectFromRows(rows, obj)
 }
 
 func (db *DB[T]) Search(ctx context.Context, field any, value any, obj T) ([]T, error) {
@@ -252,6 +259,50 @@ func (db *DB[T]) Delete(ctx context.Context, id int) error {
 	return checkRowsAffected(res, "delete", obj)
 }
 
+func (db *DB[T]) Check(ctx context.Context, obj T) (T, bool) {
+	fields := obj.GetList()
+	switch obj.GetType() {
+	case models.UserType:
+		fields = fields[:2]
+	default:
+		fmt.Printf("cannot check %s type", obj.GetType())
+		return nil, false
+	}
+	fmt.Printf("Fields is %v\n", fields)
+	query := switchQuery(obj, CheckQuery)
+	//var ID, Username, Password, FirstName, LastName, Email, Phone, UserStatus interface{}
+	row := db.pool.QueryRow(ctx, query, fields...)
+	checkedObj, err := setObjFields(row, obj)
+	//var id int
+	//values := []interface{}{id}
+	//values = append(values, obj.GetList()...)
+	//err := db.pool.QueryRow(ctx, query, fields...).Scan(values...)
+	if err != nil {
+		fmt.Println(err)
+		return nil, false
+	}
+	//fmt.Println(values)
+	//
+	//rows, err := db.pool.Query(
+	//	ctx, query, fields...,
+	//)
+	//fmt.Printf("rows is %v\n", rows)
+	//if err != nil {
+	//	fmt.Printf("bad query result: %s with args %s", query, fields)
+	//	return nil, false
+	//}
+	////if err = checkRowsAffected(rows.CommandTag(), "check", obj); err != nil {
+	////	fmt.Printf("Rows is %v\n", rows.CommandTag())
+	////	return nil, false
+	////}
+	//obj, err = getObjectFromRows(rows, obj)
+	//if err != nil {
+	//	fmt.Printf("Error during getObject: %s", err)
+	//	return nil, false
+	//}
+	return checkedObj, true
+}
+
 func switchQuery[T objrepo.Modelable](obj T, queryType int) (query string) {
 	switch obj.GetType() {
 	case models.UserType:
@@ -278,6 +329,8 @@ func switchUserQuery(queryType int) (query string) {
 		query = UserDeleteByID
 	case SearchQuery:
 		query = UserSelectByField
+	case CheckQuery:
+		query = UserCheckPW
 	default:
 		panic("Unknown query type")
 	}
@@ -320,15 +373,14 @@ func switchShortLinkQuery(queryType int) (query string) {
 	return
 }
 
-func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T, id int) (T, error) {
+func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	var (
 		found bool
 		err   error
 	)
 	for rows.Next() {
 		if found {
-			err = fmt.Errorf("%w: user id %d", ErrMultipleFound, id)
-			return nil, err
+			return nil, ErrMultipleFound
 		}
 		obj, err = setObjFields(rows, obj)
 		if err != nil {
@@ -340,29 +392,84 @@ func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T, id int) (T, er
 		return nil, err
 	}
 	if !found {
-		err := fmt.Errorf("%w: user id %d", ErrNotFound, id)
-		return nil, err
+		return nil, ErrNotFound
 	}
 	return obj, nil
 }
 
+//func Helper[T objrepo.Modelable, PT interface {
+//	*T
+//	Set(m map[string]interface{}) error
+//}](obj T, m map[string]interface{}) T {
+//	p := PT(new(T))
+//	p.Set(m)
+//	return *p
+//}
+
 func getObjectsFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) ([]T, error) {
-	var err error
+	//var err error
+
+	// Buffer instance of *T
+
 	sliceObjectsT := make([]T, 0)
+	fmt.Printf("get %d rows!\n", rows.CommandTag().RowsAffected())
 	for rows.Next() {
-		obj, err = setObjFields(rows, obj)
+		newobj, err := setObjFields(rows, obj)
 		if err != nil {
 			return nil, err
 		}
-		sliceObjectsT = append(sliceObjectsT, obj)
+		//newObjMap := newobj.Get()
+		//res := Foo(newObjMap)
+		//sliceObjectsT = append(sliceObjectsT, res)
+		sliceObjectsT = append(sliceObjectsT, newobj)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return sliceObjectsT, nil
 }
 
-func setObjFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+func Foo[T objrepo.Modelable, PT interface {
+	*T
+	Set(m map[string]interface{}) error
+}](m map[string]interface{}) T {
+	p := PT(new(T))
+	_ = p.Set(m) // calling method on non-nil pointer
+	return *p
+}
+
+//
+//type SetGetter[V any, T any] interface {
+//	Set(V)
+//	Get() V
+//	*T
+//}
+//
+//func SetGetterStruct[V map[string]any, T any, PT SetGetter[V, T]](values V) T {
+//	out := make([]T, len(values))
+//	for i, v := range values {
+//		p := PT(&out[i])
+//		p.Set(v)
+//	}
+//
+//	return out
+//}
+
+//
+//func makeNew[T any](v T) func() any {
+//	if typ := reflect.TypeOf(v); typ.Kind() == reflect.Ptr {
+//		elem := typ.Elem()
+//		return func() any {
+//			return reflect.New(elem).Type()
+//			//Interface() // must use reflect
+//		}
+//	} else {
+//		return func() any { return new(T) } // v is not ptr, alloc with new
+//	}
+//}
+
+func setObjFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {
 	switch obj.GetType() {
 	case models.UserType:
 		return setUserFields(rows, obj)
@@ -375,7 +482,7 @@ func setObjFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	}
 }
 
-func setUserFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+func setUserFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {
 	var (
 		id                                                    int
 		username, password, firstName, lastName, email, phone string
@@ -398,7 +505,7 @@ func setUserFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	return obj, err
 }
 
-func setLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+func setLinkFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {
 	var (
 		id, clickCounter, ownerID int
 		longLink                  string
@@ -418,7 +525,7 @@ func setLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 	return obj, err
 }
 
-func setShortLinkFields[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
+func setShortLinkFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {
 	var (
 		id, longLinkID int
 		token          string

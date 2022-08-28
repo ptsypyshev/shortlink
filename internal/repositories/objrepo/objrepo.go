@@ -21,6 +21,7 @@ type Modelable interface {
 	GetType() string
 	GetList() []interface{}
 	Set(m map[string]interface{}) error
+	Get() map[string]interface{}
 }
 
 type Create[T Modelable] interface {
@@ -43,12 +44,17 @@ type Delete[T Modelable] interface {
 	Delete(ctx context.Context, id int) error
 }
 
+type Check[T Modelable] interface {
+	Check(ctx context.Context, obj T) (T, bool)
+}
+
 type Storage[T Modelable] interface {
 	Create[T]
 	Read[T]
 	Search[T]
 	Update[T]
 	Delete[T]
+	Check[T]
 }
 
 type Users struct {
@@ -114,6 +120,15 @@ func (u Users) Delete(ctx context.Context, id int) (*models.User, error) {
 		return nil, fmt.Errorf("search user error: %w", err)
 	}
 	return user, u.store.Delete(ctx, id)
+}
+
+func (u Users) Check(ctx context.Context, checkUser *models.User) (*models.User, bool) {
+	user, ok := u.store.Check(ctx, checkUser)
+	if !ok {
+		u.logger.Error(fmt.Sprintf(`check failed for user: %s`, checkUser.Username))
+		return nil, false
+	}
+	return user, true
 }
 
 type Links struct {

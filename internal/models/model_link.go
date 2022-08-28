@@ -14,7 +14,6 @@ type Link struct {
 	ClickCounter int    `json:"click_counter,omitempty" mapstructure:"click_counter"`
 	OwnerID      int    `json:"owner_id,omitempty" mapstructure:"owner_id"`
 	IsActive     bool   `json:"is_active,omitempty" mapstructure:"is_active"`
-	//Clickers     []Clicker `json:"clickers,omitempty" mapstructure:"id"`
 }
 
 func (l *Link) GetType() string {
@@ -32,6 +31,17 @@ func (l *Link) Set(m map[string]interface{}) error {
 	}
 	//fmt.Println(l)
 	return nil
+}
+
+func (l *Link) Get() map[string]interface{} {
+	mLinkFields := map[string]interface{}{
+		"id":            l.ID,
+		"long_link":     l.LongLink,
+		"click_counter": l.ClickCounter,
+		"owner_id":      l.OwnerID,
+		"is_active":     l.IsActive,
+	}
+	return mLinkFields
 }
 
 func (l *Link) String() string {
