@@ -2,6 +2,7 @@ Vue.createApp({
     delimiters: ['{%', '%}'],
     data: () => ({
         user: "",
+        captions: ["Long Link", "Counter", "Is Active"],
         links: [],
         showResult: false,
         isURLValid: false,

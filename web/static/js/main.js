@@ -9,8 +9,8 @@ Vue.createApp({
         isURLValid: false,
     }),
     methods: {
-        change:function(e){
-            const url = e.target.value
+        change:function(){
+            // const url = e.target.value
             this.showResult = false
             this.isURLValid = validator.isURL(this.shortlink.longLink, {require_protocol: true});
         },

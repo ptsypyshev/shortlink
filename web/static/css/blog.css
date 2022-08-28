@@ -1,4 +1,7 @@
 /* stylelint-disable selector-list-comma-newline-after */
+.link-caption {
+  background-color: lightgray;
+}
 pre {
   white-space: pre-wrap;
 }

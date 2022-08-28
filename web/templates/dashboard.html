@@ -6,7 +6,7 @@
 <main class="container">
     <script defer src="/static/js/main.js"></script>
     <script defer src="/static/js/dashboard.js"></script>
-    <div class="p-4 p-md-5 mb-4 text-dark rounded bg-light">
+    <div class="p-4 p-md-5 mb-0 text-dark rounded bg-light">
         <div class="row flex-nowrap justify-content-between align-items-center">
             <p>
                 Add new link:
@@ -31,11 +31,32 @@
             </div>
         </div>
     </div>
-    <div class="row g-5 linklist">
-        <button type="button" class="btn btn-secondary" @click="getLinks">GetLinks</button>
+    <div class="px-4 px-md-5 mb-4 linklist">
+        <div class="py-2 d-grid gap-0">
+            <button type="button" class="btn btn-secondary btn-lg" @click="getLinks">Update Links Table</button>
+        </div>
+        <div class="px-3 row flex-nowrap justify-content-between align-items-center">
+            <div class="col-auto col-sm-8 col-lg-10 link-caption">
+                Long Link
+            </div>
+            <div class="col-1 col-sm-2 col-lg-1 link-caption">
+                Counter
+            </div>
+            <div class="col-1 col-sm-2 col-lg-1 link-caption">
+                Active
+            </div>
+        </div>
         <template v-for="link in links">
-            <div>
-                <p>{% link %}</p>
+            <div class="px-3 row flex-nowrap justify-content-between align-items-center">
+                <div class="col-auto col-sm-8 col-lg-10 link-row">
+                    {% link.long_link %}
+                </div>
+                <div class="col-1 col-sm-2 col-lg-1 link-row">
+                    {% link.click_counter %}
+                </div>
+                <div class="col-1 col-sm-2 col-lg-1 link-row">
+                    {% link.is_active %}
+                </div>
             </div>
         </template>
     </div>

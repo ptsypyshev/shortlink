@@ -64,8 +64,8 @@ RETURNING id;
 	//ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE $1 = $2;`
 	ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE token = $1;`
 
-	//DatabaseURL = "postgres://usr:pwd@postgres:5432/simpleblog?sslmode=disable"
-	DatabaseURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
+	DatabaseURL = "postgres://usr:pwd@postgres:5432/shortlink?sslmode=disable"
+	//DatabaseURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
 	InitDBQuery = `
 -- Create some required DB settings (Only first time)
 -- Set timezone to Yekaterinburg (GMT+05)
@@ -107,12 +107,16 @@ CREATE TABLE IF NOT EXISTS shortlinks
 	long_link_id INT NOT NULL UNIQUE REFERENCES links (id) ON DELETE CASCADE ON UPDATE CASCADE
 	
 );
+
+-- Insert Administrator user
+INSERT INTO users(username, password, first_name, last_name, email, phone, user_status)
+VALUES
+	('admin', crypt('admin', gen_salt('bf', 8)), 'Administrator', 'TaskSystem', 'admin@example.loc', '111', 'true');
 `
 	InitDemoQuery = `
 -- Insert Users
 INSERT INTO users(username, password, first_name, last_name, email, phone, user_status)
 VALUES
-	('admin', crypt('password', gen_salt('bf', 8)), 'Administrator', 'TaskSystem', 'admin@example.loc', '111', 'true'),
 	('ptsypyshev', crypt('testpass', gen_salt('bf', 8)), 'Pavel', 'Tsypyshev', 'ptsypyshev@example.loc', '111', 'true'),
 	('vpupkin', crypt('puptest', gen_salt('bf', 8)), 'Vasiliy', 'Pupkin', 'vpupkin@example.loc', '111', 'false'),
 	('iivanov', crypt('ivantest', gen_salt('bf', 8)), 'Ivan', 'Ivanov', 'iivanov@example.loc', '111', 'true'),

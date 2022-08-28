@@ -51,18 +51,7 @@ func (a App) HandlerDashboard(c *gin.Context) {
 	if userID == nil {
 		userID = user[0].ID
 	}
-	fmt.Println(user)
-	//links, _ := a.links.Search(a.ctx, "owner_id", user[0].ID)
-	//if err != nil {
-	//	fmt.Printf("cannot find links for user %s with id %d\n", userSession, user[0].ID)
-	//	session.Delete(UserKey)
-	//	if err := session.Save(); err != nil {
-	//		log.Println("Failed to save session:", err)
-	//		return
-	//	}
-	//	c.Redirect(http.StatusFound, "/login")
-	//	return
-	//}
+
 	c.HTML(http.StatusOK, "dashboard", gin.H{
 		"title":        "Shortlink - Dashboard for user %s",
 		"h1_text":      "Shortlink - make your links as short as possible!",
@@ -126,11 +115,25 @@ func (a App) HandlerLogin(c *gin.Context) {
 	c.Set("userID", checkedUser.ID)
 
 	c.Redirect(http.StatusFound, "/dashboard")
+}
 
-	//c.String(http.StatusOK, "User %s is signed in successfully!\n", checkedUser.Username)
-	//c.HTML(http.StatusOK, "login", gin.H{
-	//	"title": "Shortlink - make your links as short as possible!",
-	//})
+func (a App) HandlerLogout(c *gin.Context) {
+	session := sessions.Default(c)
+	userSession := session.Get(UserKey)
+	if userSession == nil {
+		c.HTML(http.StatusBadRequest, "login",
+			gin.H{
+				"title": "Shortlink - Please login first",
+			})
+		return
+	}
+	session.Delete(UserKey)
+	if err := session.Save(); err != nil {
+		log.Println("Failed to save session:", err)
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/")
 }
 
 func (a App) HandlerInitSchema(c *gin.Context) {

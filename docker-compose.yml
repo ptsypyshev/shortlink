@@ -10,3 +10,13 @@ services:
       POSTGRES_DB: shortlink
       POSTGRES_USER: usr
       POSTGRES_PASSWORD: pwd
+  go-web-server:
+    container_name: shortlink
+    build: .
+    environment:
+      - GIN_MODE=release
+    depends_on:
+      - db
+    restart: on-failure
+    ports:
+      - "8080:8080"

@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -43,6 +46,18 @@ func (a *App) Init() error {
 	pool, err := pgdb.InitDB(a.ctx, logger)
 	if err != nil {
 		log.Fatalf("cannot init DB: %s", err)
+	}
+
+	if _, err := os.Stat("/configured"); errors.Is(err, os.ErrNotExist) {
+		if err := pgdb.InitSchema(a.ctx, pool); err != nil {
+			a.logger.Error(fmt.Sprintf(`cannot init schema: %s`, err))
+			log.Fatalf("cannot init DB: %s", err)
+		}
+		file, err := os.Create("/configured")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
 	}
 
 	UsersDB := pgdb.DBNew[*models.User](pool)
@@ -87,6 +102,7 @@ func (a *App) Serve() error {
 		private.GET("/demodb/", a.HandlerAddDemoData)
 		private.GET("/api/", a.HandlerAPIHelp)
 		private.GET("/dashboard/", a.HandlerDashboard)
+		private.GET("/logout/", a.HandlerLogout)
 
 		private.GET("/api/users/:id", a.GetUser)
 		private.POST("/api//users/", a.CreateUser)

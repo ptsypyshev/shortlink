@@ -14,9 +14,13 @@
             <div class="col-6 text-center">
                 <a class="blog-header-tagline text-dark" href="/">{{ .h1_text }}</a>
             </div>
-            <div class="col-3 d-flex justify-content-around align-items-center">
-                <a class="btn btn-sm btn-outline-secondary" href="/login">Sign in</a>
-                <a class="btn btn-sm btn-outline-secondary" href="/signup">Sign up</a>
+            <div class="col-3 d-flex justify-content-end align-items-center">
+                {{if .user_session }}
+                <a class="btn btn-sm btn-outline-secondary m-1" href="/logout">Sign out</a>
+                {{else}}
+                <a class="btn btn-sm btn-outline-secondary m-1" href="/login">Sign in</a>
+                <a class="btn btn-sm btn-outline-secondary m-1" href="#">Sign up</a>
+                {{end}}
             </div>
         </div>
     </header>

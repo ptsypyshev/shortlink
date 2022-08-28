@@ -18,8 +18,6 @@ import (
 )
 
 func main() {
-	//ctx := context.Background()
-
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatal("cannot initialize zap logger")

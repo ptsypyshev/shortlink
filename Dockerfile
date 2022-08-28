@@ -1,14 +1,13 @@
 FROM golang:1.18 AS build
-WORKDIR /go/src
-COPY go ./go
-COPY main.go .
-
+WORKDIR /app
 ENV CGO_ENABLED=0
-RUN go get -d -v ./...
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+COPY . .
+RUN go build -ldflags "-w -s" -o server cmd/main.go
 
-RUN go build -a -installsuffix cgo -o swagger .
-
-FROM scratch AS runtime
-COPY --from=build /go/src/swagger ./
+FROM alpine AS runtime
+COPY --from=build /app ./
 EXPOSE 8080/tcp
-ENTRYPOINT ["./swagger"]
+ENTRYPOINT ["/server"]
