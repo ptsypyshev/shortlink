@@ -133,6 +133,7 @@ issues:
         - gosec
         - gocritic
         - structcheck
+        - typecheck
     - path: pkg/golinters/errcheck.go
       text: "SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead"
     - path: pkg/commands/run.go
