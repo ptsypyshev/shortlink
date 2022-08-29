@@ -1,60 +1,37 @@
 {{define "dashboard"}}
 <html lang="en">
 {{ template "header" .}}
-<body>
+<body class="vueapp">
 {{ template "nav" .}}
 <main class="container">
-    <script defer src="/static/js/main.js"></script>
-    <script defer src="/static/js/dashboard.js"></script>
-    <div class="p-4 p-md-5 mb-0 text-dark rounded bg-light">
-        <div class="row flex-nowrap justify-content-between align-items-center">
-            <p>
-                Add new link:
-            </p>
-        </div>
-        <div class="shortener">
-            <div class="row flex-nowrap justify-content-between align-items-center ">
-              <form class="col-md-12 px-0 shortlinkform form-floating">
-                  <div class="input-group input-group-lg">
-                      <input type="text" class="form-control" placeholder="Shorten your link"
-                             v-model="shortlink.longLink" @input="change($event)" @change="change($event)">
-                      <button type="button" class="btn btn-secondary"
-                                  :disabled="!isURLValid" @click="shortenLink">Shorten</button>
-                  </div>
-              </form>
-            </div>
-            <div v-show="showResult" class="row flex-nowrap justify-content-between align-items-center">
-                <div class="col-md-12 px-0 text-center">
-                    <p class="lead mb-0">New link for {% shortlink.longLink %}</p>
-                    <p class="lead mb-0"><a :href="shortlink.shortURL" class="text-dark fw-bold">{% shortlink.shortURL %}</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="px-4 px-md-5 mb-4 linklist">
-        <div class="py-2 d-grid gap-0">
-            <button type="button" class="btn btn-secondary btn-lg" @click="getLinks">Update Links Table</button>
-        </div>
+    {{ template "shortener" .}}
+    <div class=" mb-4">
         <div class="px-3 row flex-nowrap justify-content-between align-items-center">
-            <div class="col-auto col-sm-8 col-lg-10 link-caption">
+            <div class="border border-secondary col-5 col-sm-6 col-md-7 link-caption">
                 Long Link
             </div>
-            <div class="col-1 col-sm-2 col-lg-1 link-caption">
+            <div class="border border-secondary col-5 col-sm-4 col-md-3 link-caption">
+                Short Link
+            </div>
+            <div class="border border-secondary col-1 col-sm-2 col-md-1 link-caption">
                 Counter
             </div>
-            <div class="col-1 col-sm-2 col-lg-1 link-caption">
+            <div class="border border-secondary col-1 col-sm-2 col-md-1 link-caption">
                 Active
             </div>
         </div>
         <template v-for="link in links">
-            <div class="px-3 row flex-nowrap justify-content-between align-items-center">
-                <div class="col-auto col-sm-8 col-lg-10 link-row">
-                    {% link.long_link %}
+            <div class="px-3 row flex-nowrap justify-content-between">
+                <div class="vh-10 border border-secondary col-5 col-sm-6 col-md-7 link-row">
+                    <a class="link-secondary" :href="link.long_link" target="_blank">{% link.long_link %}</a>
                 </div>
-                <div class="col-1 col-sm-2 col-lg-1 link-row">
+                <div class="vh-10 border border-secondary col-5 col-sm-4 col-md-3 link-row">
+                    <a class="link-secondary" :href="link.short_link" target="_blank">{% link.short_link %}</a>
+                </div>
+                <div class="vh-10 border border-secondary col-1 col-sm-2 col-md-1 link-row">
                     {% link.click_counter %}
                 </div>
-                <div class="col-1 col-sm-2 col-lg-1 link-row">
+                <div class="vh-10 border border-secondary col-1 col-sm-2 col-md-1 link-row">
                     {% link.is_active %}
                 </div>
             </div>

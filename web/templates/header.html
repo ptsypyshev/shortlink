@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="">
   <meta name="userid" content="{{ .userID }}">
+  <meta name="page_template" content="{{ .page_template }}">
+
   <title>{{ .title }}</title>
   <!--  Load VueJS with defer option-->
   <!--  From External -->
@@ -13,6 +15,7 @@
   <!--  From Internal-->
   <script defer src="/static/js/vue.global.js"></script>
   <script defer src="/static/js/validator.min.js"></script>
+  <script defer src="/static/js/app.js"></script>
 
   <!-- Bootstrap core CSS -->
   <link href="/static/css/bootstrap.css" rel="stylesheet" crossorigin="anonymous">

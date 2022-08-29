@@ -5,11 +5,10 @@
 {{ template "nav" .}}
 <main class="container">
   <div class="row g-5">
-    <div class="col-md-8">
+    <div class="col-12">
       <h3 class="pb-4 mb-4 fst-italic border-bottom">
-        Сделано на golang generic, реализованы только CRUD-методы работы с объектами User и Link.
+        Сделано на golang generic + gin, реализованы только CRUD-методы работы с объектами User и Link.
       </h3>
-
       <article class="blog-post">
         <h2 class="blog-post-title">Доступный функционал:</h2>
           <h3 class="pb-4 mb-4 border-bottom">
@@ -95,42 +94,6 @@ IsActive     bool   `json:"is_active,omitempty" mapstructure:"is_active"`
               </li>
           </ul>
       </article>
-    </div>
-
-    <div class="col-md-4">
-      <div class="position-sticky" style="top: 2rem;">
-        <div class="p-4 mb-3 bg-light rounded">
-          <h4 class="fst-italic">О нас</h4>
-          <p class="mb-0">Делаем API - быстро, качественно, недорого. Выбирайте 2 любых параметра)</p>
-        </div>
-
-        <div class="p-4">
-          <h4 class="fst-italic">Архивы</h4>
-          <ol class="list-unstyled mb-0">
-            <li><a href="#">Март 2021</a></li>
-            <li><a href="#">Февраль 2021</a></li>
-            <li><a href="#">Январь 2021</a></li>
-            <li><a href="#">Декабрь 2020</a></li>
-            <li><a href="#">Ноябрь 2020</a></li>
-            <li><a href="#">Октябрь 2020</a></li>
-            <li><a href="#">Сентябрь 2020</a></li>
-            <li><a href="#">Август 2020</a></li>
-            <li><a href="#">Июль 2020</a></li>
-            <li><a href="#">Июнь 2020</a></li>
-            <li><a href="#">Май 2020</a></li>
-            <li><a href="#">Апрель 2020</a></li>
-          </ol>
-        </div>
-
-        <div class="p-4">
-          <h4 class="fst-italic">В другом месте</h4>
-          <ol class="list-unstyled">
-            <li><a href="#">GitHub</a></li>
-            <li><a href="#">Twitter</a></li>
-            <li><a href="#">Facebook</a></li>
-          </ol>
-        </div>
-      </div>
     </div>
   </div>
 

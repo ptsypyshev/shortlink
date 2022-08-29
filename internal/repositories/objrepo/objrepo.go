@@ -57,17 +57,23 @@ type Storage[T Modelable] interface {
 	Check[T]
 }
 
+type SearchLinks interface {
+	Search(ctx context.Context, field any, value any) ([]*models.Link, error)
+}
+
+type NonGenericStorage interface {
+	SearchLinks
+}
+
 type Users struct {
 	store  Storage[*models.User]
 	logger *zap.Logger
-	//tracer opentracing.Tracer
 }
 
 func UsersNew(s Storage[*models.User], l *zap.Logger) *Users {
 	return &Users{
 		store:  s,
 		logger: l,
-		//tracer: t,
 	}
 }
 
@@ -132,16 +138,16 @@ func (u Users) Check(ctx context.Context, checkUser *models.User) (*models.User,
 }
 
 type Links struct {
-	store  Storage[*models.Link]
-	logger *zap.Logger
-	//tracer opentracing.Tracer
+	store   Storage[*models.Link]
+	ngstore NonGenericStorage
+	logger  *zap.Logger
 }
 
-func LinksNew(s Storage[*models.Link], l *zap.Logger) *Links {
+func LinksNew(s Storage[*models.Link], ns NonGenericStorage, l *zap.Logger) *Links {
 	return &Links{
-		store:  s,
-		logger: l,
-		//tracer: t,
+		store:   s,
+		ngstore: ns,
+		logger:  l,
 	}
 }
 
@@ -165,7 +171,7 @@ func (l Links) Read(ctx context.Context, id int) (*models.Link, error) {
 }
 
 func (l Links) Search(ctx context.Context, field any, value any) ([]*models.Link, error) {
-	links, err := l.store.Search(ctx, field, value, &models.Link{})
+	links, err := l.ngstore.Search(ctx, field, value)
 	if err != nil {
 		l.logger.Error(fmt.Sprintf(`cannot search links: %s`, err))
 		return nil, fmt.Errorf("cannot search links: %w", err)
@@ -199,14 +205,12 @@ func (l Links) Delete(ctx context.Context, id int) (*models.Link, error) {
 type ShortLinks struct {
 	store  Storage[*models.ShortLink]
 	logger *zap.Logger
-	//tracer opentracing.Tracer
 }
 
 func ShortLinksNew(s Storage[*models.ShortLink], l *zap.Logger) *ShortLinks {
 	return &ShortLinks{
 		store:  s,
 		logger: l,
-		//tracer: t,
 	}
 }
 

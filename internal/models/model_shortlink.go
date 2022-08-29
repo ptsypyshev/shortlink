@@ -10,8 +10,8 @@ const ShortLinkType = "shortlink"
 
 type ShortLink struct {
 	ID         int    `json:"id,omitempty" mapstructure:"id"`
-	Token      string `json:"token,omitempty" mapstructure:"token"`
-	LongLinkID int    `json:"long_link_id,omitempty" mapstructure:"long_link_id"`
+	Token      string `json:"token" mapstructure:"token"`
+	LongLinkID int    `json:"long_link_id" mapstructure:"long_link_id"`
 }
 
 func (s *ShortLink) GetType() string {

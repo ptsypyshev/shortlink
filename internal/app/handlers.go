@@ -19,9 +19,10 @@ func (a App) HandlerIndex(c *gin.Context) {
 	session := sessions.Default(c)
 	userSession := session.Get(UserKey)
 	c.HTML(http.StatusOK, "main", gin.H{
-		"title":        "Shortlink - make your links as short as possible!",
-		"h1_text":      "Shortlink - make your links as short as possible!",
-		"user_session": userSession,
+		"title":         "Shortlink - make your links as short as possible!",
+		"h1_text":       "Shortlink - make your links as short as possible!",
+		"user_session":  userSession,
+		"page_template": "main",
 	})
 }
 
@@ -57,7 +58,9 @@ func (a App) HandlerDashboard(c *gin.Context) {
 		"h1_text":      "Shortlink - make your links as short as possible!",
 		"user_session": userSession,
 		//"links":        links,
-		"userID": userID,
+		"userID":        userID,
+		"is_admin":      userSession == "admin",
+		"page_template": "dashboard",
 	})
 }
 
@@ -67,14 +70,16 @@ func (a App) HandlerLoginPage(c *gin.Context) {
 	if userSession != nil {
 		c.HTML(http.StatusBadRequest, "login",
 			gin.H{
-				"title":        "Shortlink - Please logout first",
-				"user_session": userSession,
+				"title":         "Shortlink - Please logout first",
+				"user_session":  userSession,
+				"page_template": "login",
 			})
 		return
 	}
 	c.HTML(http.StatusOK, "login", gin.H{
-		"title":        "Shortlink - make your links as short as possible!",
-		"user_session": userSession,
+		"title":         "Shortlink - make your links as short as possible!",
+		"user_session":  userSession,
+		"page_template": "login",
 	})
 }
 
@@ -84,8 +89,9 @@ func (a App) HandlerLogin(c *gin.Context) {
 	if userSession != nil {
 		c.HTML(http.StatusBadRequest, "login",
 			gin.H{
-				"title":        "Shortlink - Please logout first",
-				"user_session": userSession,
+				"title":         "Shortlink - Please logout first",
+				"user_session":  userSession,
+				"page_template": "login",
 			})
 		return
 	}
@@ -139,28 +145,29 @@ func (a App) HandlerLogout(c *gin.Context) {
 func (a App) HandlerInitSchema(c *gin.Context) {
 	if err := pgdb.InitSchema(c, a.pool); err != nil {
 		a.logger.Error(fmt.Sprintf(`cannot init schema: %s`, err))
-		c.String(http.StatusInternalServerError, "DB is not initialized")
+		c.JSON(http.StatusInternalServerError, gin.H{"result": "DB is not initialized"})
 		return
 	}
-	c.String(http.StatusOK, "DB Initialized")
+	c.JSON(http.StatusOK, gin.H{"result": "DB Initialized"})
 }
 
 func (a App) HandlerAddDemoData(c *gin.Context) {
 	if err := pgdb.AddDemoData(c, a.pool); err != nil {
 		a.logger.Error(fmt.Sprintf(`cannot add demo data: %s`, err))
-		c.String(http.StatusInternalServerError, "Demo data is not added")
+		c.JSON(http.StatusInternalServerError, gin.H{"result": "Demo data is not added"})
 		return
 	}
-	c.String(http.StatusOK, "Demo data is added")
+	c.JSON(http.StatusOK, gin.H{"result": "Demo data is added"})
 }
 
 func (a App) HandlerAPIHelp(c *gin.Context) {
 	session := sessions.Default(c)
 	userSession := session.Get(UserKey)
 	c.HTML(http.StatusOK, "api", gin.H{
-		"title":        "Shortlink - API Help",
-		"h1_text":      "Shortlink - make your links as short as possible!",
-		"user_session": userSession,
+		"title":         "Shortlink - API Help",
+		"h1_text":       "Shortlink - make your links as short as possible!",
+		"user_session":  userSession,
+		"page_template": "api",
 	})
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,16 @@ const (
 	DeleteQuery
 	SearchQuery
 	CheckQuery
+
+	EnvVarUserDB     = "DB_USER"
+	EnvVarPasswordDB = "DB_PASS"
+	EnvVarHostPortDB = "DB_HOST_PORT"
+	EnvVarNameDB     = "DB_NAME"
+
+	DefaultUserDB     = "usr"
+	DefaultPasswordDB = "pwd"
+	DefaultHostPortDB = "localhost:5432"
+	DefaultNameDB     = "shortlink"
 
 	UserTable      = "users"
 	UserSelectByID = `SELECT * FROM users WHERE id = $1;`
@@ -50,7 +61,9 @@ RETURNING id;
 `
 
 	//LinkSelectByField = `SELECT * FROM links WHERE $1 = $2;`
-	LinkSelectByField = `SELECT * FROM links WHERE owner_id = $1;`
+	LinkSelectByField = `
+SELECT long_link, token, click_counter, is_active FROM links, shortlinks 
+WHERE links.id = shortlinks.long_link_id AND owner_id = $1 ORDER BY links.id DESC;`
 
 	ShortLinkTable      = "shortlinks"
 	ShortLinkSelectByID = `SELECT * FROM shortlinks WHERE id = $1;`
@@ -64,9 +77,8 @@ RETURNING id;
 	//ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE $1 = $2;`
 	ShortLinkSelectByField = `SELECT * FROM shortlinks WHERE token = $1;`
 
-	DatabaseURL = "postgres://usr:pwd@postgres:5432/shortlink?sslmode=disable"
-	//DatabaseURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
-	InitDBQuery = `
+	DatabaseDefaultURL = "postgres://usr:pwd@localhost:5432/shortlink?sslmode=disable"
+	InitDBQuery        = `
 -- Create some required DB settings (Only first time)
 -- Set timezone to Yekaterinburg (GMT+05)
 set timezone = 'Asia/Yekaterinburg';
@@ -95,7 +107,7 @@ CREATE TABLE IF NOT EXISTS links
 (
 	id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	long_link TEXT NOT NULL,
-	click_counter INT,
+	click_counter INT DEFAULT 0 NOT NULL,
 	owner_id INT REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	is_active BOOL
 );
@@ -117,8 +129,8 @@ VALUES
 -- Insert Users
 INSERT INTO users(username, password, first_name, last_name, email, phone, user_status)
 VALUES
-	('ptsypyshev', crypt('testpass', gen_salt('bf', 8)), 'Pavel', 'Tsypyshev', 'ptsypyshev@example.loc', '111', 'true'),
-	('vpupkin', crypt('puptest', gen_salt('bf', 8)), 'Vasiliy', 'Pupkin', 'vpupkin@example.loc', '111', 'false'),
+	('test', crypt('test', gen_salt('bf', 8)), 'Pavel', 'Tsypyshev', 'ptsypyshev@example.loc', '111', 'true'),
+	('user', crypt('pass', gen_salt('bf', 8)), 'Vasiliy', 'Pupkin', 'vpupkin@example.loc', '111', 'false'),
 	('iivanov', crypt('ivantest', gen_salt('bf', 8)), 'Ivan', 'Ivanov', 'iivanov@example.loc', '111', 'true'),
 	('ppetrov', crypt('petrtest', gen_salt('bf', 8)), 'Petr', 'Petrov', 'ppetrov@example.loc', '111', 'true'),
 	('ssidorov', crypt('sidrtest', gen_salt('bf', 8)), 'Sidor', 'Sidorov', 'ssidorov@example.loc', '111', 'true');
@@ -161,14 +173,32 @@ var (
 )
 
 type Rowsable interface {
-	//pgx.Rows | pgx.Row
 	Scan(dest ...interface{}) error
 }
 
-func InitDB(ctx context.Context, logger *zap.Logger) (*pgxpool.Pool, error) {
-	config, err := pgxpool.ParseConfig(DatabaseURL)
+func MakeConnectionStringFromEnv() string {
+	dbUser := getEnv(EnvVarUserDB, DefaultUserDB)
+	dbPass := getEnv(EnvVarPasswordDB, DefaultPasswordDB)
+	dbHost := getEnv(EnvVarHostPortDB, DefaultHostPortDB)
+	dbName := getEnv(EnvVarNameDB, DefaultNameDB)
+	return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbName)
+}
+
+func getEnv(envVarName, defaultValue string) string {
+	result := os.Getenv(envVarName)
+	if result == "" {
+		result = defaultValue
+	}
+	return result
+}
+
+func InitDB(ctx context.Context, connectionString string, logger *zap.Logger) (*pgxpool.Pool, error) {
+	if connectionString == "" {
+		connectionString = DatabaseDefaultURL
+	}
+	config, err := pgxpool.ParseConfig(connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse conn string (%s): %w", DatabaseURL, err)
+		return nil, fmt.Errorf("failed to parse conn string (%s): %w", connectionString, err)
 	}
 	config.ConnConfig.LogLevel = pgx.LogLevelDebug
 	config.ConnConfig.Logger = zapadapter.NewLogger(logger) // логгер запросов в БД
@@ -197,6 +227,39 @@ func DBNew[T objrepo.Modelable](p *pgxpool.Pool) *DB[T] {
 	return &DB[T]{
 		pool: p,
 	}
+}
+
+type NGDB struct {
+	pool *pgxpool.Pool
+}
+
+func NGDBNew(p *pgxpool.Pool) *NGDB {
+	return &NGDB{
+		pool: p,
+	}
+}
+
+func (n *NGDB) Search(ctx context.Context, field any, value any) ([]*models.Link, error) {
+	query := LinkSelectByField
+
+	rows, err := n.pool.Query(ctx, query, value)
+	if err != nil {
+		return nil, err
+	}
+
+	sliceLinks := make([]*models.Link, 0)
+	for rows.Next() {
+		newlink, err := setLinkFieldsNG(rows)
+		if err != nil {
+			return nil, err
+		}
+		sliceLinks = append(sliceLinks, &newlink)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return sliceLinks, nil
 }
 
 func (db *DB[T]) Create(ctx context.Context, obj T) (id int, err error) {
@@ -274,36 +337,13 @@ func (db *DB[T]) Check(ctx context.Context, obj T) (T, bool) {
 	}
 	fmt.Printf("Fields is %v\n", fields)
 	query := switchQuery(obj, CheckQuery)
-	//var ID, Username, Password, FirstName, LastName, Email, Phone, UserStatus interface{}
 	row := db.pool.QueryRow(ctx, query, fields...)
 	checkedObj, err := setObjFields(row, obj)
-	//var id int
-	//values := []interface{}{id}
-	//values = append(values, obj.GetList()...)
-	//err := db.pool.QueryRow(ctx, query, fields...).Scan(values...)
 	if err != nil {
 		fmt.Println(err)
 		return nil, false
 	}
-	//fmt.Println(values)
-	//
-	//rows, err := db.pool.Query(
-	//	ctx, query, fields...,
-	//)
-	//fmt.Printf("rows is %v\n", rows)
-	//if err != nil {
-	//	fmt.Printf("bad query result: %s with args %s", query, fields)
-	//	return nil, false
-	//}
-	////if err = checkRowsAffected(rows.CommandTag(), "check", obj); err != nil {
-	////	fmt.Printf("Rows is %v\n", rows.CommandTag())
-	////	return nil, false
-	////}
-	//obj, err = getObjectFromRows(rows, obj)
-	//if err != nil {
-	//	fmt.Printf("Error during getObject: %s", err)
-	//	return nil, false
-	//}
+
 	return checkedObj, true
 }
 
@@ -411,10 +451,6 @@ func getObjectFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) (T, error) {
 //}
 
 func getObjectsFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) ([]T, error) {
-	//var err error
-
-	// Buffer instance of *T
-
 	sliceObjectsT := make([]T, 0)
 	fmt.Printf("get %d rows!\n", rows.CommandTag().RowsAffected())
 	for rows.Next() {
@@ -434,14 +470,14 @@ func getObjectsFromRows[T objrepo.Modelable](rows pgx.Rows, obj T) ([]T, error) 
 	return sliceObjectsT, nil
 }
 
-func Foo[T objrepo.Modelable, PT interface {
-	*T
-	Set(m map[string]interface{}) error
-}](m map[string]interface{}) T {
-	p := PT(new(T))
-	_ = p.Set(m) // calling method on non-nil pointer
-	return *p
-}
+//func Foo[T objrepo.Modelable, PT interface {
+//	*T
+//	Set(m map[string]interface{}) error
+//}](m map[string]interface{}) T {
+//	p := PT(new(T))
+//	_ = p.Set(m) // calling method on non-nil pointer
+//	return *p
+//}
 
 //
 //type SetGetter[V any, T any] interface {
@@ -527,6 +563,27 @@ func setLinkFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {
 	}
 	err := obj.Set(mObjFields)
 	return obj, err
+}
+
+func setLinkFieldsNG(rows pgx.Rows) (models.Link, error) {
+	var (
+		clickCounter, ownerID    int
+		longLink, shortLinkToken string
+		isActive                 bool
+		linkStruct               models.Link
+	)
+	if err := rows.Scan(&longLink, &shortLinkToken, &clickCounter, &isActive); err != nil {
+		return linkStruct, err
+	}
+	mObjFields := map[string]interface{}{
+		"long_link":     longLink,
+		"click_counter": clickCounter,
+		"owner_id":      ownerID,
+		"is_active":     isActive,
+		"short_link":    shortLinkToken,
+	}
+	err := linkStruct.Set(mObjFields)
+	return linkStruct, err
 }
 
 func setShortLinkFields[R Rowsable, T objrepo.Modelable](rows R, obj T) (T, error) {

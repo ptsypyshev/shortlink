@@ -10,10 +10,11 @@ const LinkType = "link"
 
 type Link struct {
 	ID           int    `json:"id,omitempty" mapstructure:"id"`
-	LongLink     string `json:"long_link,omitempty" mapstructure:"long_link"`
-	ClickCounter int    `json:"click_counter,omitempty" mapstructure:"click_counter"`
-	OwnerID      int    `json:"owner_id,omitempty" mapstructure:"owner_id"`
-	IsActive     bool   `json:"is_active,omitempty" mapstructure:"is_active"`
+	LongLink     string `json:"long_link" mapstructure:"long_link"`
+	ClickCounter int    `json:"click_counter" mapstructure:"click_counter"`
+	OwnerID      int    `json:"owner_id" mapstructure:"owner_id"`
+	IsActive     bool   `json:"is_active" mapstructure:"is_active"`
+	ShortLink    string `json:"short_link,omitempty" mapstructure:"short_link"`
 }
 
 func (l *Link) GetType() string {
@@ -29,7 +30,6 @@ func (l *Link) Set(m map[string]interface{}) error {
 	if err := mapstructure.Decode(m, &l); err != nil {
 		return err
 	}
-	//fmt.Println(l)
 	return nil
 }
 

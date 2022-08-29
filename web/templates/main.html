@@ -1,10 +1,9 @@
 {{define "main"}}
 <html lang="en">
 {{ template "header" .}}
-<body>
+<body class="vueapp">
 {{ template "nav" .}}
 <main class="container">
-    <script defer src="/static/js/main.js"></script>
     <div class="p-4 p-md-5 mb-4 text-dark rounded bg-light">
         <div class="row flex-nowrap justify-content-between align-items-center">
           <div class="col-md-6 px-0 main-text">
@@ -20,24 +19,8 @@
           </div>
         </div>
         <div class="shortener">
-            <div class="row flex-nowrap justify-content-between align-items-center ">
-              <form class="col-md-12 px-0 shortlinkform form-floating">
-                  <div class="input-group input-group-lg">
-                      <input type="text" class="form-control" placeholder="Shorten your link"
-                             v-model="shortlink.longLink" @input="change($event)" @change="change($event)">
-                      <button type="button" class="btn btn-secondary"
-                                  :disabled="!isURLValid" @click="shortenLink">Shorten</button>
-                  </div>
-              </form>
-            </div>
-            <div v-show="showResult" class="row flex-nowrap justify-content-between align-items-center">
-                <div class="col-md-12 px-0 text-center">
-                    <p class="lead mb-0">New link for {% shortlink.longLink %}</p>
-                    <p class="lead mb-0"><a :href="shortlink.shortURL" class="text-dark fw-bold">{% shortlink.shortURL %}</a></p>
-                </div>
-            </div>
+            {{ template "shortener" .}}
         </div>
-
     </div>
 </main>
 {{ template "footer" .}}

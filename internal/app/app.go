@@ -40,20 +40,20 @@ func (a *App) Init() error {
 		log.Fatalf("cannot init Logger: %s", err)
 	}
 	defer func() { _ = logger.Sync() }()
-	//tracer, closer := InitJaeger(logger)
-	//tracer, closer := InitJaeger("Shortlink", "localhost:6831", logger)
 
-	pool, err := pgdb.InitDB(a.ctx, logger)
+	connectionString := pgdb.MakeConnectionStringFromEnv()
+
+	pool, err := pgdb.InitDB(a.ctx, connectionString, logger)
 	if err != nil {
 		log.Fatalf("cannot init DB: %s", err)
 	}
 
-	if _, err := os.Stat("/configured"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat("configured"); errors.Is(err, os.ErrNotExist) {
 		if err := pgdb.InitSchema(a.ctx, pool); err != nil {
 			a.logger.Error(fmt.Sprintf(`cannot init schema: %s`, err))
 			log.Fatalf("cannot init DB: %s", err)
 		}
-		file, err := os.Create("/configured")
+		file, err := os.Create("configured")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -62,10 +62,11 @@ func (a *App) Init() error {
 
 	UsersDB := pgdb.DBNew[*models.User](pool)
 	LinksDB := pgdb.DBNew[*models.Link](pool)
+	LinksNGDB := pgdb.NGDBNew(pool)
 	ShortLinksDB := pgdb.DBNew[*models.ShortLink](pool)
 
 	users := objrepo.UsersNew(UsersDB, logger)
-	links := objrepo.LinksNew(LinksDB, logger)
+	links := objrepo.LinksNew(LinksDB, LinksNGDB, logger)
 	shortlinks := objrepo.ShortLinksNew(ShortLinksDB, logger)
 
 	a.logger = logger
@@ -74,7 +75,6 @@ func (a *App) Init() error {
 	a.links = *links
 	a.shortlinks = *shortlinks
 	return nil
-	//return closer, nil
 }
 
 func (a *App) Serve() error {
@@ -89,7 +89,7 @@ func (a *App) Serve() error {
 	{
 		public.GET("/", a.HandlerIndex)
 		public.GET("/:token", a.HandlerShortLink)
-		//public.GET("/api/", a.HandlerAPIHelp)
+		public.GET("/api/", a.HandlerAPIHelp)
 		public.GET("/login", a.HandlerLoginPage)
 		public.POST("/login", a.HandlerLogin)
 		public.POST("/api/links/", a.CreateLink)
@@ -100,7 +100,6 @@ func (a *App) Serve() error {
 	{
 		private.GET("/dbinit/", a.HandlerInitSchema)
 		private.GET("/demodb/", a.HandlerAddDemoData)
-		private.GET("/api/", a.HandlerAPIHelp)
 		private.GET("/dashboard/", a.HandlerDashboard)
 		private.GET("/logout/", a.HandlerLogout)
 
@@ -111,7 +110,6 @@ func (a *App) Serve() error {
 		private.GET("/api/users/:id/links", a.SearchLinks)
 
 		private.GET("/api/links/:id", a.GetLink)
-		//private.POST("/api//links/", a.CreateLink)
 		private.PUT("/api/links/", a.UpdateLink)
 		private.DELETE("/api/links/:id", a.DeleteLink)
 	}

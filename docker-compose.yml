@@ -15,6 +15,10 @@ services:
     build: .
     environment:
       - GIN_MODE=release
+      - DB_USER=usr
+      - DB_PASS=pwd
+      - DB_HOST_PORT=postgres:5432
+      - DB_NAME=shortlink
     depends_on:
       - db
     restart: on-failure
