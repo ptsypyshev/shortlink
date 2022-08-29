@@ -10,7 +10,7 @@
           <form class="col-md-12 px-0 shortlinkform form-floating">
               <div class="input-group input-group-lg">
                   <input type="text" class="form-control" placeholder="Shorten your link"
-                         v-model="shortlink.longLink" @keydown.Enter.prevent="shortenLink" @input="change($event)">
+                         v-model="shortlink.longLink" @keydown.Enter.prevent="shortenLink" @input="change($event)" @change="change($event)">
                   <button type="button" class="btn btn-secondary"
                               :disabled="!isURLValid" @click="shortenLink">Shorten</button>
               </div>

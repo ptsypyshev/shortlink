@@ -346,7 +346,7 @@ func (a App) HandlerShortLink(c *gin.Context) {
 		return
 	}
 	if len(shortlinks) != 1 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("get bad redirect for %s", value)})
+		a.HandlerNoRoute(c)
 		return
 	}
 	linkID := shortlinks[0].LongLinkID
@@ -364,4 +364,11 @@ func (a App) HandlerShortLink(c *gin.Context) {
 		return
 	}
 	c.Redirect(http.StatusFound, link.LongLink)
+}
+
+func (a App) HandlerNoRoute(c *gin.Context) {
+	c.HTML(http.StatusNotFound, "error404", gin.H{
+		"title":   "Shortlink - Page is not found",
+		"h1_text": "Shortlink - make your links as short as possible!",
+	})
 }

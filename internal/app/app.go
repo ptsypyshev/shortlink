@@ -83,6 +83,7 @@ func (a *App) Serve() error {
 	a.router.Static("/static", "./web/static")
 	a.router.LoadHTMLGlob("web/templates/*")
 	a.router.Use(sessions.Sessions("session", cookie.NewStore([]byte("secret"))))
+	a.router.NoRoute(a.HandlerNoRoute)
 
 	//Routes
 	public := a.router.Group("/")
