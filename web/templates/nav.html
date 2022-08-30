@@ -28,6 +28,7 @@
             {{if .user_session }}
                 <a class="p-2 link-secondary" href="/dashboard/">Dashboard</a>
                 {{if .is_admin }}
+                    <a class="p-2 link-secondary" href="/users/" >User Management</a>
                     <a class="p-2 link-secondary" href="#" @click="initDB">Init Database</a>
                     <a class="p-2 link-secondary" href="#" @click="addDemoData">Add Demo Data</a>
                 {{end}}

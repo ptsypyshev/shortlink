@@ -11,8 +11,9 @@
               <p class="lead my-3">The service provides an opportunity to make a short link from any link
                   and use it to send to the target audience.</p>
               <p class="lead my-3">Registered users can also get information about the number of clicks on a shortened link.</p>
-
-              <p class="lead mb-0"><a href="/login" class="text-dark fw-bold">Sign in</a></p>
+              {{ if not .user_session }}
+                <p class="lead mb-0"><a href="/login" class="text-dark fw-bold">Sign in</a></p>
+              {{ end }}
           </div>
           <div class="col-md-6 px-0 main-img">
               <img class="blog-image" src="/static/img/Shorten-URL-1024x635.png" alt="">

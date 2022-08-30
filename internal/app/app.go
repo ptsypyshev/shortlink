@@ -62,11 +62,11 @@ func (a *App) Init() error {
 
 	UsersDB := pgdb.DBNew[*models.User](pool)
 	LinksDB := pgdb.DBNew[*models.Link](pool)
-	LinksNGDB := pgdb.NGDBNew(pool)
+	NGDB := pgdb.NGDBNew(pool)
 	ShortLinksDB := pgdb.DBNew[*models.ShortLink](pool)
 
-	users := objrepo.UsersNew(UsersDB, logger)
-	links := objrepo.LinksNew(LinksDB, LinksNGDB, logger)
+	users := objrepo.UsersNew(UsersDB, NGDB, logger)
+	links := objrepo.LinksNew(LinksDB, NGDB, logger)
 	shortlinks := objrepo.ShortLinksNew(ShortLinksDB, logger)
 
 	a.logger = logger
@@ -102,10 +102,12 @@ func (a *App) Serve() error {
 		private.GET("/dbinit/", a.HandlerInitSchema)
 		private.GET("/demodb/", a.HandlerAddDemoData)
 		private.GET("/dashboard/", a.HandlerDashboard)
+		private.GET("/users/", a.HandlerUsersManagement)
 		private.GET("/logout/", a.HandlerLogout)
 
 		private.GET("/api/users/:id", a.GetUser)
-		private.POST("/api//users/", a.CreateUser)
+		private.GET("/api/users/", a.GetUsers)
+		private.POST("/api/users/", a.CreateUser)
 		private.PUT("/api/users/", a.UpdateUser)
 		private.DELETE("/api/users/:id", a.DeleteUser)
 		private.GET("/api/users/:id/links", a.SearchLinks)

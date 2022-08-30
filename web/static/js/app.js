@@ -8,9 +8,10 @@ Vue.createApp({
         showShortLink: false,
         isURLValid: false,
         user: "",
+        users: [],
         links: [],
         showLinks: false,
-        askInitDB: false,
+        // askInitDB: false,
     }),
     watch: {
         showShortLink() {
@@ -18,8 +19,7 @@ Vue.createApp({
         }
     },
     methods: {
-        change: function () {
-            // const url = e.target.value
+        change: function (e) {
             this.showShortLink = false
             this.isURLValid = validator.isURL(this.shortlink.longLink, {require_protocol: true});
         },
@@ -73,6 +73,29 @@ Vue.createApp({
                 });
             this.showLinks = true;
         },
+        getUsers() {
+            const requestOptions = {
+                method: 'GET'
+            };
+            let id = document.querySelector('meta[name="userid"]').content;
+            fetch('/api/users/', requestOptions)
+                .then(async response => {
+                    const data = await response.json();
+                    // check for error response
+                    if (!response.ok) {
+                        // get error message from body or default to response status
+                        const error = (data && data.message) || response.status;
+                        return Promise.reject(error);
+                    }
+                    // let users = data.found;
+                    this.users = data.found;
+                })
+                .catch(error => {
+                    this.errorMessage = error;
+                    console.error('There was an error!', error);
+                });
+            // this.showUsers = true;
+        },
         initDB() {
             this.getRequest('/dbinit/', "Do you really want to Init DB? All data will be lost...");
             this.getLinks();
@@ -110,9 +133,16 @@ Vue.createApp({
             if (page_template == "dashboard") {
                 this.getLinks();
             }
+        },
+        getUsersOnUserManagement() {
+            let page_template = document.querySelector('meta[name="page_template"]').content;
+            if (page_template == "users") {
+                this.getUsers();
+            }
         }
     },
     beforeMount(){
         this.getLinksOnDashboard();
+        this.getUsersOnUserManagement();
     },
 }).mount('.vueapp');

@@ -57,23 +57,30 @@ type Storage[T Modelable] interface {
 	Check[T]
 }
 
+type SearchUsers interface {
+	SearchUsers(ctx context.Context, field any, value any) ([]*models.User, error)
+}
+
 type SearchLinks interface {
-	Search(ctx context.Context, field any, value any) ([]*models.Link, error)
+	SearchLinks(ctx context.Context, field any, value any) ([]*models.Link, error)
 }
 
 type NonGenericStorage interface {
+	SearchUsers
 	SearchLinks
 }
 
 type Users struct {
-	store  Storage[*models.User]
-	logger *zap.Logger
+	store   Storage[*models.User]
+	ngstore NonGenericStorage
+	logger  *zap.Logger
 }
 
-func UsersNew(s Storage[*models.User], l *zap.Logger) *Users {
+func UsersNew(s Storage[*models.User], ns NonGenericStorage, l *zap.Logger) *Users {
 	return &Users{
-		store:  s,
-		logger: l,
+		store:   s,
+		ngstore: ns,
+		logger:  l,
 	}
 }
 
@@ -97,12 +104,12 @@ func (u Users) Read(ctx context.Context, id int) (*models.User, error) {
 }
 
 func (u Users) Search(ctx context.Context, field any, value any) ([]*models.User, error) {
-	links, err := u.store.Search(ctx, field, value, &models.User{})
+	users, err := u.ngstore.SearchUsers(ctx, field, value)
 	if err != nil {
 		u.logger.Error(fmt.Sprintf(`cannot search links: %s`, err))
 		return nil, fmt.Errorf("cannot search links: %w", err)
 	}
-	return links, nil
+	return users, nil
 }
 
 func (u Users) Update(ctx context.Context, id int, updateUser *models.User) (*models.User, error) {
@@ -171,7 +178,7 @@ func (l Links) Read(ctx context.Context, id int) (*models.Link, error) {
 }
 
 func (l Links) Search(ctx context.Context, field any, value any) ([]*models.Link, error) {
-	links, err := l.ngstore.Search(ctx, field, value)
+	links, err := l.ngstore.SearchLinks(ctx, field, value)
 	if err != nil {
 		l.logger.Error(fmt.Sprintf(`cannot search links: %s`, err))
 		return nil, fmt.Errorf("cannot search links: %w", err)
