@@ -11,11 +11,47 @@ servers:
 - url: https://localhost:8080/api/
 tags:
 - name: link
-  description: "Information about link (Long and short URLs, statistics, etc.)"
+  description: "Operations about link (Long and short URLs, statistics, etc.)"
 - name: user
-  description: Operations about user
+  description: "Operations about user"
 paths:
   /links:
+    post:
+        tags:
+        - link
+        summary: Create a new link with a new shotrlink
+        operationId: addLink
+        requestBody:
+          description: Link object that needs to be added to the store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+          required: true
+        responses:
+          "200":
+            description: "ok"
+            content:
+              application/json:
+                example:
+                  {"created": "5dg8s0"}
+          "400":
+            description: "bad request"
+            content:
+              application/json:
+                example:
+                  {"error": "bad request"}
+          "500":
+            description: "create link error"
+            content:
+              application/json:
+                example:
+                  {"error": "create link error"}
+        security:
+        - external_auth:
+          - write:links
+          - read:links
+        x-codegen-request-body-name: body
     put:
       tags:
       - link
@@ -29,41 +65,30 @@ paths:
               $ref: '#/components/schemas/Link'
         required: true
       responses:
+        "200":
+            description: "ok"
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Link'
         "400":
-          description: Invalid ID supplied
-          content: {}
-        "404":
-          description: Link not found
-          content: {}
-        "405":
-          description: Validation exception
-          content: {}
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
+        "500":
+          description: "update link error"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
       security:
       - external_auth:
         - write:links
         - read:links
       x-codegen-request-body-name: body
-    post:
-      tags:
-      - link
-      summary: Add a new link to the store
-      operationId: addLink
-      requestBody:
-        description: Link object that needs to be added to the store
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Link'
-        required: true
-      responses:
-        "405":
-          description: Invalid input
-          content: {}
-      security:
-      - external_auth:
-        - write:links
-        - read:links
-      x-codegen-request-body-name: body
+  
   /links/{linkId}:
     get:
       tags:
@@ -89,55 +114,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Link'
         "400":
-          description: Invalid ID supplied
-          content: {}
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
         "404":
-          description: Pet not found
+          description: Link not found
           content: {}
-      security:
+      
+        "500":
+          description: "update link error"
+          content:
+            application/json:
+              example:
+                {"error": "update link error"}
+      security:  
       - api_key: []
-    post:
-      tags:
-      - link
-      summary: Updates a link in the store with form data
-      operationId: updateLinkWithForm
-      parameters:
-      - name: api_key
-        in: header
-        required: false
-        style: simple
-        explode: false
-        schema:
-          type: string
-      - name: linkId
-        in: path
-        description: ID of pet that needs to be updated
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/links_linkId_body'
-      responses:
-        "200":
-          description: successful operation
-          content: {}
-        "405":
-          description: Invalid input
-          content: {}
-      security:
-      - external_auth:
-        - write:links
-        - read:links
     delete:
       tags:
       - link
-      summary: Deletes a link
+      summary: Delete a link
       operationId: deleteLink
       parameters:
       - name: api_key
@@ -159,13 +156,26 @@ paths:
       responses:
         "200":
           description: successful operation
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
         "400":
-          description: Invalid ID supplied
-          content: {}
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
         "404":
           description: Link not found
           content: {}
+      
+        "500":
+          description: "delete link error"
+          content:
+            application/json:
+              example:
+                {"error": "delete link error"}
       security:
       - external_auth:
         - write:links
@@ -185,9 +195,61 @@ paths:
               $ref: '#/components/schemas/User'
         required: true
       responses:
-        default:
-          description: successful operation
-          content: {}
+        "200":
+          description: "ok"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
+        "500":
+          description: "create user error"
+          content:
+            application/json:
+              example:
+                {"error": "create user error"}
+      security:
+      - external_auth:
+        - write:links
+        - read:links
+      x-codegen-request-body-name: body
+    put:
+      tags:
+      - user
+      summary: Updated user
+      description: This can only be done by the logged in user.
+      operationId: updateUser
+      requestBody:
+        description: Updated user object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        "200":
+          description: "ok"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
+        "500":
+          description: "update user error"
+          content:
+            application/json:
+              example:
+                {"error": "update user error"}
       x-codegen-request-body-name: body
   /users/login:
     post:
@@ -248,16 +310,16 @@ paths:
         default:
           description: successful operation
           content: {}
-  /users/{username}:
+  /users/{id}:
     get:
       tags:
       - user
-      summary: Get user by username
+      summary: Get user by id
       operationId: getUserByName
       parameters:
-      - name: username
+      - name: id
         in: path
-        description: The name of user that needs to be fetched.
+        description: The id of user that needs to be fetched.
         required: true
         style: simple
         explode: false
@@ -271,41 +333,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
         "400":
-          description: Invalid username supplied
-          content: {}
-        "404":
-          description: User not found
-          content: {}
-    put:
-      tags:
-      - user
-      summary: Updated user
-      description: This can only be done by the logged in user.
-      operationId: updateUser
-      parameters:
-      - name: username
-        in: path
-        description: name that need to be updated
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-      requestBody:
-        description: Updated user object
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-        required: true
-      responses:
-        "400":
-          description: Invalid user supplied
-          content: {}
-        "404":
-          description: User not found
-          content: {}
-      x-codegen-request-body-name: body
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
+        "500":
+          description: "get user error"
+          content:
+            application/json:
+              example:
+                {"error": "get user error"}
     delete:
       tags:
       - user
@@ -313,31 +351,43 @@ paths:
       description: This can only be done by the logged in user.
       operationId: deleteUser
       parameters:
-      - name: username
+      - name: id
         in: path
-        description: The name that needs to be deleted
+        description: The id of user that needs to be deleted.
         required: true
         style: simple
         explode: false
         schema:
           type: string
       responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         "400":
-          description: Invalid username supplied
-          content: {}
-        "404":
-          description: User not found
-          content: {}
-  /users/{username}/links:
+          description: "bad request"
+          content:
+            application/json:
+              example:
+                {"error": "bad request"}
+        "500":
+          description: "delete user error"
+          content:
+            application/json:
+              example:
+                {"error": "delete user error"}
+  /users/{id}/links:
     get:
       tags:
       - link
       summary: Get links by username
       operationId: getLinksByUsername
       parameters:
-      - name: username
+      - name: id
         in: path
-        description: The name of user which links should to be fetched.
+        description: The id of user which links should to be fetched.
         required: true
         style: simple
         explode: false
@@ -367,59 +417,23 @@ components:
         id:
           type: integer
           format: int64
-        shorkLink:
+        long_link:
           type: string
-        longLink:
-          type: string
-        clickCounter:
+        click_counter:
           type: integer
           format: int64
-        clickers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Clicker'
-        status:
-          type: boolean
-          default: false
-      example:
-        shorkLink: shorkLink
-        longLink: longLink
-        clickCounter: 6
-        clickers:
-        - country: country
-          uniqueCookie: uniqueCookie
-          ipAddress: ipAddress
-          id: 1
-          status: false
-        - country: country
-          uniqueCookie: uniqueCookie
-          ipAddress: ipAddress
-          id: 1
-          status: false
-        id: 0
-        status: false
-    Clicker:
-      type: object
-      properties:
-        id:
+        owner_id:
           type: integer
           format: int64
-        uniqueCookie:
-          type: string
-        ipAddress:
-          type: string
-          format: ipv4
-        country:
-          type: string
-        status:
+        is_active:
           type: boolean
           default: false
+        short_link:
+          type: string
       example:
-        country: country
-        uniqueCookie: uniqueCookie
-        ipAddress: ipAddress
-        id: 1
-        status: false
+        long_link: "https://ya.ru"
+        id: 2
+        status: true
     User:
       type: object
       properties:
@@ -431,36 +445,26 @@ components:
         password:
           type: string
           format: password
-        firstName:
+        first_name:
           type: string
-        lastName:
+        last_name:
           type: string
         email:
           type: string
           format: email
         phone:
           type: string
-        userStatus:
-          type: integer
-          description: User Status
-          format: int32
+        user_status:
+          type: boolean
       example:
-        firstName: firstName
-        lastName: lastName
-        password: ""
-        userStatus: 6
-        phone: phone
         id: 0
-        email: ""
-        username: username
-    links_linkId_body:
-      properties:
-        longLink:
-          type: string
-          description: Updated long link
-        status:
-          type: string
-          description: Updated status of the link
+        username: "test"
+        password: "pass"
+        first_name: "Test"
+        last_name: "User"
+        email: "test@test.com"
+        phone: "111"
+        userStatus: true
   securitySchemes:
     external_auth:
       type: oauth2
