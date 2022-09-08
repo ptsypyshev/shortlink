@@ -44,7 +44,7 @@ RETURNING id;
 `
 	//UserSelectByField = `SELECT * FROM users WHERE $1 = $2;`
 	UserSelectByField = `SELECT * FROM users WHERE username = $1;`
-	UserSelectAll     = `SELECT * FROM users;`
+	UserSelectAll     = `SELECT * FROM users ORDER BY id;`
 	UserCheckPW       = `SELECT * FROM users WHERE username = $1 AND password = crypt($2, password);`
 
 	LinkTable      = "links"

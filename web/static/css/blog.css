@@ -1,4 +1,18 @@
 /* stylelint-disable selector-list-comma-newline-after */
+.btn-nostyle {
+  all: unset;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.btn-nostyle:focus {
+  outline: orange 5px auto;
+}
+
+.form-check-secondary{color:#fff;background-color:#6c757d;border-color:#6c757d}
+.form-check-secondary:hover{color:#fff;background-color:#5c636a;border-color:#565e64}
+.form-check-check:focus+.form-check-secondary,.form-check-secondary:focus{color:#fff;background-color:#5c636a;border-color:#565e64;box-shadow:0 0 0 .25rem rgba(130,138,145,.5)}
+
 .link-caption {
   background-color: lightgray;
 }

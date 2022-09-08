@@ -4,7 +4,77 @@
 <body class="vueapp">
 {{ template "nav" .}}
 <main class="container">
-    <div class=" mb-4">
+    <div v-show="showUserEditForm" class=" mb-4">
+        <div class="col-12">
+            <h3 class="pb-4 mb-4 fst-italic">
+                <div v-if="userform.id != null" >
+                    Edit user:
+                </div>
+                <div v-else>
+                    Add new user:
+                </div>
+            </h3>
+        </div>
+        <form id="userform">
+            <div class="col">
+                <input type="hidden" class="form-control" name="id" v-model="userform.id">
+            </div>
+            <div class="row mb-2">
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Enter username" name="username" v-model="userform.username">
+                </div>
+                <div class="col">
+                    <input type="password" class="form-control" placeholder="Enter new password (empty value will not change the password)" name="password" v-model="userform.password">
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="First name" name="first_name" v-model="userform.first_name">
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Last name" name="last_name" v-model="userform.last_name">
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Email" name="email" v-model="userform.email">
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Phone" name="phone" v-model="userform.phone">
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col">
+                    <div class="form-check form-switch">
+                        <input class="form-check-secondary form-check-input" type="checkbox" role="switch"
+                               id="flexSwitchUserStatus" name="user_status" checked v-model="userform.user_status">
+                        <label v-if="userform.user_status" class="form-check-label" for="flexSwitchUserStatus">Enabled User</label>
+                        <label v-else class="form-check-label" for="flexSwitchUserStatus">Disabled User</label>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="btn-group" role="group" aria-label="Basic example">
+<!--            <div v-if="userform.id != null" >-->
+                <button v-if="userform.id != null" type="button" class="btn btn-secondary"
+                        @click="editUserSaveForm">Save</button>
+<!--            </div>-->
+<!--            <div v-else>-->
+                <button v-else type="button" class="btn btn-secondary"
+                        @click="createUserSaveForm">Add</button>
+<!--            </div>-->
+<!--            <div>-->
+                <button type="button" class="btn btn-secondary"
+                        @click="showUserEditForm = !showUserEditForm">Cancel</button>
+<!--            </div>-->
+        </div>
+
+    </div>
+    <div v-show="!showUserEditForm" class="mb-4">
+        <div class="px-1 mb-4">
+            <button type="button" class="btn btn-secondary"
+                    @click="createUserShowForm">Add new user</button>
+        </div>
         <div class="px-3 row">
             <div class="border border-secondary col-1 link-caption">
                 ID
@@ -21,11 +91,11 @@
             <div class="border border-secondary col-2 link-caption">
                 Email
             </div>
-            <div class="border border-secondary col-2 link-caption">
+            <div class="border border-secondary col-1 link-caption">
                 Phone
             </div>
-            <div class="border border-secondary col-1 link-caption">
-                Is Active?
+            <div class="border border-secondary col-2 link-caption">
+                Modify
             </div>
         </div>
         <template v-for="user in users">
@@ -45,18 +115,23 @@
                 <div class="border border-secondary col-2">
                     {% user.email %}
                 </div>
-                <div class="border border-secondary col-2">
+                <div class="border border-secondary col-1">
                     {% user.phone %}
                 </div>
-                <div v-if="user.user_status" class="border border-secondary col-1">
-                    <a href="#"><img src="/static/img/user-enabled.png" width="16" height="16"></a>
-                    <a href="#"><img src="/static/img/edit_icon.svg" width="16" height="16"></a>
-                    <a href="#"><img src="/static/img/delete_icon.svg" width="16" height="16"></a>
-                </div>
-                <div v-else class="border border-secondary col-1">
-                    <a href="#"><img src="/static/img/user-disabled.png" width="16" height="16"></a>
-                    <a href="#"><img src="/static/img/edit_icon.svg" width="16" height="16"></a>
-                    <a href="#"><img src="/static/img/delete_icon.svg" width="16" height="16"></a>
+                <div class="border border-secondary col-2">
+<!--                <div v-if="user.user_status" class="border border-secondary col-1">-->
+                    <div class="btn-group" role="group" aria-label="Basic example">
+                        <button type="button" title="Enable/Disable User" class="btn btn-nostyle" @click="changeUser(user)">
+                            <img v-if="user.user_status" src="/static/img/user-enabled.png" width="16" height="16">
+                            <img v-else src="/static/img/user-disabled.png" width="16" height="16">
+                        </button>
+                        <button type="button" title="Edit User" class="btn btn-nostyle" @click="editUserShowForm(user)">
+                            <img src="/static/img/edit_icon.svg" width="16" height="16">
+                        </button>
+                        <button type="button" title="Delete User" class="btn btn-nostyle" @click="deleteUser(user.id)">
+                            <img src="/static/img/delete_icon.svg" width="16" height="16">
+                        </button>
+                    </div>
                 </div>
             </div>
         </template>

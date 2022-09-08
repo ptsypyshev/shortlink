@@ -9,13 +9,24 @@ Vue.createApp({
         isURLValid: false,
         user: "",
         users: [],
+        userform: {
+            isForm: true,
+            id: "",
+            username: "",
+            password: "",
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone: "",
+            user_status: ""
+        },
         links: [],
         showLinks: false,
-        // askInitDB: false,
+        showUserEditForm: false,
     }),
     watch: {
         showShortLink() {
-            this.getLinksOnDashboard();
+            this.getObjectsForTemplate();
         }
     },
     methods: {
@@ -87,22 +98,140 @@ Vue.createApp({
                         const error = (data && data.message) || response.status;
                         return Promise.reject(error);
                     }
-                    // let users = data.found;
                     this.users = data.found;
                 })
                 .catch(error => {
                     this.errorMessage = error;
                     console.error('There was an error!', error);
                 });
-            // this.showUsers = true;
+        },
+        createUser(user) {
+            let json_string = {};
+            ["username", "password", "first_name", "last_name", "email", "phone", "user_status"].forEach(function (elem) {
+                if (user[elem] != "" || elem == "user_status") {
+                    json_string[elem] = user[elem];
+                }
+            })
+            const requestOptions = {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(json_string)
+            };
+            fetch('/api/users/', requestOptions)
+                .then(async response => {
+                    const data = await response.json();
+                    // check for error response
+                    if (!response.ok) {
+                        // get error message from body or default to response status
+                        const error = (data && data.message) || response.status;
+                        return Promise.reject(error);
+                    }
+                    this.getObjectsForTemplate();
+                })
+                .catch(error => {
+                    this.errorMessage = error;
+                    console.error('There was an error!', error);
+                });
+        },
+        createUserShowForm() {
+            for (const userformKey in this.userform) {
+                this.userform[userformKey] = null;
+            }
+            this.userform["user_status"] = true;
+            this.showUserEditForm = !this.showUserEditForm;
+        },
+        createUserSaveForm() {
+            this.createUser(this.userform);
+            this.showUserEditForm = !this.showUserEditForm;
+            // this.getObjectsForTemplate();
+        },
+        changeUser(user) {
+            let answer = false
+            let json_string = {}
+            if (user.isForm) {
+                answer = true;
+                ["id", "username", "password", "first_name", "last_name", "email", "phone", "user_status"].forEach(function (elem) {
+                    if (user[elem] != "" || elem == "user_status") {
+                        json_string[elem] = user[elem];
+                    }
+                })
+            } else {
+                let operation = "disable" ? user.user_status : "enable"
+                let msg = "Do you really want to " + operation + " this user?"
+                answer = confirm(msg);
+                json_string = {"id": user.id, "user_status": !user.user_status}
+            }
+            if (answer) {
+                const requestOptions = {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(json_string)
+                };
+                fetch('/api/users/', requestOptions)
+                    .then(async response => {
+                        const data = await response.json();
+                        // check for error response
+                        if (!response.ok) {
+                            // get error message from body or default to response status
+                            const error = (data && data.message) || response.status;
+                            return Promise.reject(error);
+                        }
+                        this.getObjectsForTemplate();
+                    })
+                    .catch(error => {
+                        this.errorMessage = error;
+                        console.error('There was an error!', error);
+                    });
+
+            }
+        },
+        editUserShowForm(user) {
+            this.userform.id = user.id;
+            this.userform.username = user.username;
+            this.userform.first_name = user.first_name;
+            this.userform.last_name = user.last_name;
+            this.userform.email = user.email;
+            this.userform.phone = user.phone;
+            this.userform.user_status = user.user_status;
+
+            this.showUserEditForm = !this.showUserEditForm;
+        },
+        editUserSaveForm() {
+            this.changeUser(this.userform);
+            this.showUserEditForm = !this.showUserEditForm;
+            // this.getObjectsForTemplate();
+        },
+        deleteUser(user_id) {
+            let msg = "Do you really want to delete this user?"
+            let answer = confirm(msg);
+            if (answer) {
+                const requestOptions = {
+                    method: 'DELETE'
+                };
+                fetch('/api/users/' + user_id, requestOptions)
+                    .then(async response => {
+                        const data = await response.json();
+                        // check for error response
+                        if (!response.ok) {
+                            // get error message from body or default to response status
+                            const error = (data && data.message) || response.status;
+                            return Promise.reject(error);
+                        }
+                        this.getObjectsForTemplate();
+                    })
+                    .catch(error => {
+                        this.errorMessage = error;
+                        console.error('There was an error!', error);
+                    });
+            }
         },
         initDB() {
             this.getRequest('/dbinit/', "Do you really want to Init DB? All data will be lost...");
-            this.getLinks();
+            this.getObjectsForTemplate();
         },
         addDemoData() {
             this.getRequest('/demodb/', "Do you really want add demo data?");
-            this.getLinks();
+            this.getObjectsForTemplate();
         },
         getRequest(path, msg) {
             let answer = confirm(msg);
@@ -128,21 +257,19 @@ Vue.createApp({
                     });
             }
         },
-        getLinksOnDashboard() {
+        getObjectsForTemplate() {
             let page_template = document.querySelector('meta[name="page_template"]').content;
-            if (page_template == "dashboard") {
-                this.getLinks();
-            }
-        },
-        getUsersOnUserManagement() {
-            let page_template = document.querySelector('meta[name="page_template"]').content;
-            if (page_template == "users") {
-                this.getUsers();
+            switch (page_template) {
+                case "dashboard":
+                    this.getLinks();
+                    break;
+                case "users":
+                    this.getUsers();
+                    break;
             }
         }
     },
     beforeMount(){
-        this.getLinksOnDashboard();
-        this.getUsersOnUserManagement();
+        this.getObjectsForTemplate();
     },
 }).mount('.vueapp');

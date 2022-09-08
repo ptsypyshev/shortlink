@@ -16,7 +16,7 @@ type User struct {
 	LastName   string `json:"last_name,omitempty" mapstructure:"last_name"`
 	Email      string `json:"email,omitempty" mapstructure:"email"`
 	Phone      string `json:"phone,omitempty" mapstructure:"phone"`
-	UserStatus bool   `json:"user_status,omitempty" mapstructure:"user_status"`
+	UserStatus bool   `json:"user_status" mapstructure:"user_status"`
 }
 
 func (u *User) GetType() string {

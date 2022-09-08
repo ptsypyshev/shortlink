@@ -94,6 +94,13 @@ func (a *App) Serve() error {
 		public.GET("/login", a.HandlerLoginPage)
 		public.POST("/login", a.HandlerLogin)
 		public.POST("/api/links/", a.CreateLink)
+
+		//public.PUT("/api/users/", a.UpdateUser)
+		public.GET("/api/users/:id", a.GetUser)
+		public.GET("/api/users/", a.GetUsers)
+		public.POST("/api/users/", a.CreateUser)
+		public.PUT("/api/users/", a.UpdateUser)
+		public.DELETE("/api/users/:id", a.DeleteUser)
 	}
 
 	private := a.router.Group("/")
@@ -105,11 +112,12 @@ func (a *App) Serve() error {
 		private.GET("/users/", a.HandlerUsersManagement)
 		private.GET("/logout/", a.HandlerLogout)
 
-		private.GET("/api/users/:id", a.GetUser)
-		private.GET("/api/users/", a.GetUsers)
-		private.POST("/api/users/", a.CreateUser)
-		private.PUT("/api/users/", a.UpdateUser)
-		private.DELETE("/api/users/:id", a.DeleteUser)
+		//private.GET("/api/users/:id", a.GetUser)
+		//private.GET("/api/users/", a.GetUsers)
+		//private.POST("/api/users/", a.CreateUser)
+		//private.PUT("/api/users/", a.UpdateUser)
+		//private.DELETE("/api/users/:id", a.DeleteUser)
+
 		private.GET("/api/users/:id/links", a.SearchLinks)
 
 		private.GET("/api/links/:id", a.GetLink)
