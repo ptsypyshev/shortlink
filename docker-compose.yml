@@ -1,0 +1,26 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: shortlink
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: pwd
+  go-web-server:
+    container_name: shortlink
+    build: .
+    environment:
+      - GIN_MODE=release
+      - DB_USER=usr
+      - DB_PASS=pwd
+      - DB_HOST_PORT=postgres:5432
+      - DB_NAME=shortlink
+    depends_on:
+      - db
+    restart: on-failure
+    ports:
+      - "8080:8080"

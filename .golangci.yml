@@ -18,9 +18,9 @@ linters-settings:
   gocritic:
     enabled-tags:
       - diagnostic
-      - experimental
       - opinionated
       - performance
+      - experimental
       - style
     disabled-checks:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
@@ -79,7 +79,7 @@ linters:
     - funlen
     - gochecknoinits
     - goconst
-    - gocritic
+#    - gocritic
     - gocyclo
     - gofmt
     - goimports
@@ -95,7 +95,7 @@ linters:
     - noctx
     - nolintlint
     - staticcheck
-    - structcheck
+#    - structcheck
     - stylecheck
     - typecheck
     - unconvert
@@ -103,7 +103,9 @@ linters:
     - unused
     - varcheck
     - whitespace
-
+  # disabled due generics trouble
+  # - gocritic
+  # - structcheck
   # don't enable:
   # - asciicheck
   # - scopelint
@@ -126,7 +128,15 @@ issues:
     - path: _test\.go
       linters:
         - gomnd
-
+    - path: internal/db/pgdb
+      linters:
+        - gosec
+        - gocritic
+        - structcheck
+        - typecheck
+    - path: internal/app/app.go
+      linters:
+        - typecheck
     - path: pkg/golinters/errcheck.go
       text: "SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead"
     - path: pkg/commands/run.go
