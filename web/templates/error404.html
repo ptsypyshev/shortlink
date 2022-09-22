@@ -1,0 +1,28 @@
+{{define "error404"}}
+<html lang="en">
+{{ template "header" .}}
+<body class="vueapp">
+{{ template "nav" .}}
+<main class="container">
+    <div class="p-4 p-md-5 mb-4 text-dark rounded bg-light">
+        <div class="row flex-nowrap justify-content-between align-items-center">
+          <div class="col-md-6 px-0 main-text">
+              <h1 class="display-4 fst-italic">Oh, no... Your short link is lost...</h1>
+              <p class="lead my-3">Maybe the link is inactive now or something went wrong.</p>
+              <p class="lead my-3">Anyway you can create new short link or sign in to your account.</p>
+
+              <p class="lead mb-0"><a href="/login" class="text-dark fw-bold">Sign in</a></p>
+          </div>
+          <div class="col-md-6 px-0 main-img">
+              <img class="blog-image" src="/static/img/404-not-found.png" alt="">
+          </div>
+        </div>
+        <div class="shortener">
+            {{ template "shortener" .}}
+        </div>
+    </div>
+</main>
+{{ template "footer" .}}
+</body>
+</html>
+{{end}}

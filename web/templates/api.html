@@ -1,0 +1,104 @@
+{{define "api"}}
+<html lang="en">
+{{ template "header" .}}
+<body>
+{{ template "nav" .}}
+<main class="container">
+  <div class="row g-5">
+    <div class="col-12">
+      <h3 class="pb-4 mb-4 fst-italic border-bottom">
+        Сделано на golang generic + gin, реализованы только CRUD-методы работы с объектами User и Link.
+      </h3>
+      <article class="blog-post">
+        <h2 class="blog-post-title">Доступный функционал:</h2>
+          <h3 class="pb-4 mb-4 border-bottom">
+              Users - Пользователи
+          </h3>
+          <h4>
+              Модель данных
+          </h4>
+            <pre>
+type User struct {
+ID         int    `json:"id,omitempty" mapstructure:"id"`
+Username   string `json:"username,omitempty" mapstructure:"username" form:"username"`
+Password   string `json:"password,omitempty" mapstructure:"password" form:"password"`
+FirstName  string `json:"first_name,omitempty" mapstructure:"first_name"`
+LastName   string `json:"last_name,omitempty" mapstructure:"last_name"`
+Email      string `json:"email,omitempty" mapstructure:"email"`
+Phone      string `json:"phone,omitempty" mapstructure:"phone"`
+UserStatus bool   `json:"user_status,omitempty" mapstructure:"user_status"`
+}
+            </pre>
+          <hr>
+          <h4>
+              Методы (path /api/users/)
+          </h4>
+          <ul>
+              <li>
+                  GET - Получить данные пользователя
+                  <p>curl -X GET http://localhost:8080/api/users/5</p>
+              </li>
+              <li>
+                  POST - Создать нового пользователя
+                  <p>curl -X POST http://localhost:8080/api/users/ -H 'Content-Type: application/json'
+                      -d '{"username":"tester", "password":"test", "first_name":"First", "last_name":"Last", "email":"tester@example.loc", "phone":"222"}'</p>
+              </li>
+              <li>
+                  PUT - Обновить данные пользователя
+                  <p>curl -X PUT http://localhost:8080/api/users/ -H 'Content-Type: application/json'
+                      -d '{"id":7, "username":"Updated", "user_status":true}'</p>
+              </li>
+              <li>
+                  DELETE - Удалить пользователя
+                  <p>curl -X DELETE http://localhost:8080/api/users/5</p>
+              </li>
+          </ul>
+
+          <h3 class="pb-4 mb-4 border-bottom">
+              Links - ссылки
+          </h3>
+          <h4>
+              Модель данных
+          </h4>
+          <pre>
+type Link struct {
+ID           int    `json:"id,omitempty" mapstructure:"id"`
+LongLink     string `json:"long_link,omitempty" mapstructure:"long_link"`
+ClickCounter int    `json:"click_counter,omitempty" mapstructure:"click_counter"`
+OwnerID      int    `json:"owner_id,omitempty" mapstructure:"owner_id"`
+IsActive     bool   `json:"is_active,omitempty" mapstructure:"is_active"`
+}
+          </pre>
+          <hr>
+          <h4>
+              Методы (path /api/links/)
+          </h4>
+          <ul>
+              <li>
+                  GET - Получить ссылку по ID
+                  <p>curl -X GET http://localhost:8080/api/links/7</p>
+              </li>
+              <li>
+                  POST - Создать новую ссылку
+                  <p>curl -X POST http://localhost:8080/api/links/ -H 'Content-Type: application/json'
+                      -d '{"long_link":"http://r0.ru"}'</p>
+              </li>
+              <li>
+                  PUT - Обновить ссылку
+                  <p>curl -X PUT http://localhost:8080/api/links/ -H 'Content-Type: application/json'
+                      -d '{"id":5, "long_link":"http://r0.ru", "is_active":true}'</p>
+              </li>
+              <li>
+                  DELETE - Удалить ссылку
+                  <p>curl -X DELETE http://localhost:8080/api/links/7</p>
+              </li>
+          </ul>
+      </article>
+    </div>
+  </div>
+
+</main>
+{{ template "footer" .}}
+</body>
+</html>
+{{end}}

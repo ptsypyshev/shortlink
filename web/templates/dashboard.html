@@ -1,0 +1,44 @@
+{{define "dashboard"}}
+<html lang="en">
+{{ template "header" .}}
+<body class="vueapp">
+{{ template "nav" .}}
+<main class="container">
+    {{ template "shortener" .}}
+    <div class=" mb-4">
+        <div class="px-3 row flex-nowrap justify-content-between align-items-center">
+            <div class="border border-secondary col-5 col-sm-6 col-md-7 link-caption">
+                Long Link
+            </div>
+            <div class="border border-secondary col-5 col-sm-4 col-md-3 link-caption">
+                Short Link
+            </div>
+            <div class="border border-secondary col-1 col-sm-2 col-md-1 link-caption">
+                Counter
+            </div>
+            <div class="border border-secondary col-1 col-sm-2 col-md-1 link-caption">
+                Active
+            </div>
+        </div>
+        <template v-for="link in links">
+            <div class="px-3 row flex-nowrap justify-content-between">
+                <div class="vh-10 border border-secondary col-5 col-sm-6 col-md-7 link-row">
+                    <a class="link-secondary" :href="link.long_link" target="_blank">{% link.long_link %}</a>
+                </div>
+                <div class="vh-10 border border-secondary col-5 col-sm-4 col-md-3 link-row">
+                    <a class="link-secondary" :href="link.short_link" target="_blank">{% link.short_link %}</a>
+                </div>
+                <div class="vh-10 border border-secondary col-1 col-sm-2 col-md-1 link-row">
+                    {% link.click_counter %}
+                </div>
+                <div class="vh-10 border border-secondary col-1 col-sm-2 col-md-1 link-row">
+                    {% link.is_active %}
+                </div>
+            </div>
+        </template>
+    </div>
+</main>
+{{ template "footer" .}}
+</body>
+</html>
+{{end}}
