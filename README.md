@@ -12,6 +12,11 @@ Also user can get statistics for URL generated url (how much people followed the
 5. PostgreSQL - to store data in database
 6. Docker & Docker compose - to run services in containers
 
+## How to deploy
+1. Clone git repository `git clone https://github.com/ptsypyshev/shortlink.git`
+2. In project directory run `docker-compose up`
+3. Go to the http://localhost:8080/
+
 ## Screenshots
 Main page:
 ![screenshot_01.png](./assets/screenshots/screenshot_01.png)
